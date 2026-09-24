@@ -1,0 +1,769 @@
+# MicroservicesLab
+
+MicroservicesLab e um laboratorio pratico para estudar arquitetura de microservicos usando .NET, Go, PostgreSQL, Kafka, gRPC, Docker e Kubernetes.
+
+O projeto foi construido em fases. A Parte I cobre os fundamentos de microservicos nas Fases 0-12 e esta concluida. A Parte II, registrada como expansao futura, cobre sistemas distribuidos realtime nas Fases 13-22.
+
+A expansao realtime nao foi iniciada. Ela deve comecar somente por instrucao explicita para a FASE 13.
+
+## Arquitetura
+
+```mermaid
+flowchart TD
+    Client[Client / curl / Postman]
+
+    Client -->|HTTP REST| Order[Order.Service]
+    Order -->|gRPC| Inventory[Inventory.Service]
+    Order -->|Kafka: order-created| Kafka[(Kafka)]
+    Kafka --> Payment[Payment.Service]
+    Payment -->|Kafka: payment-approved / payment-rejected| Kafka
+    Kafka --> Order
+    Kafka --> Audit[Audit.Worker]
+
+    Order --> OrderDb[(PostgreSQL: order_db)]
+    Inventory --> InventoryDb[(PostgreSQL: inventory_db)]
+    Audit --> AuditDb[(PostgreSQL: audit_db)]
+```
+
+## Tecnologias
+
+- .NET 9 para `Order.Service`, `Inventory.Service`, `Audit.Worker` e `Shared.Contracts`.
+- Go para `Payment.Service`.
+- Go para a futura expansao `Realtime.PriceFeed`, onde a linguagem sera usada de forma intencional para concorrencia, streaming e conexoes de longa duracao.
+- PostgreSQL com bancos independentes por servico.
+- gRPC para a consulta de estoque entre Order e Inventory.
+- Kafka para eventos de dominio e comunicacao assincrona.
+- Docker Compose para o ambiente local inicial.
+- Kubernetes para a etapa final do laboratorio.
+- OpenTelemetry como base de observabilidade.
+
+## Estrutura
+
+```text
+MicroservicesLab/
+  src/
+    services/
+      Order.Service/
+      Inventory.Service/
+      Payment.Service/
+    workers/
+      Audit.Worker/
+    building-blocks/
+      Shared.Contracts/
+    protos/
+  tests/
+    Order.Service.Tests/
+    Inventory.Service.Tests/
+    Audit.Worker.Tests/
+  infra/
+    kafka/
+    postgres/
+    observability/
+  k8s/
+  scripts/
+    k8s/
+  docs/
+    guides/
+    labs/
+  docker-compose.yml
+  MicroservicesLab.sln
+  README.md
+```
+
+## Quick Start
+
+Docker Compose completo:
+
+```powershell
+docker compose up -d --build
+docker compose ps
+```
+
+Kubernetes local:
+
+```powershell
+docker compose build inventory-service order-service payment-service audit-worker
+kubectl apply -k k8s
+kubectl get pods -n microservices-lab
+```
+
+## Documentacao
+
+### Arquitetura
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [Roadmap](docs/ROADMAP.md)
+- [Progress](docs/PROGRESS.md)
+
+### Guias Operacionais
+
+- [Executando localmente](docs/guides/RUNNING-LOCALLY.md)
+- [Kafka](docs/guides/KAFKA.md)
+- [PostgreSQL](docs/guides/POSTGRESQL.md)
+- [gRPC](docs/guides/GRPC.md)
+- [Resiliencia](docs/guides/RESILIENCE.md)
+- [Observabilidade](docs/guides/OBSERVABILITY.md)
+- [Kubernetes](docs/guides/KUBERNETES.md)
+- [Quick Reference](docs/guides/QUICK-REFERENCE.md)
+- [Troubleshooting](docs/guides/TROUBLESHOOTING.md)
+
+### Labs
+
+- [Indice dos labs](docs/labs/README.md)
+
+### Convencao Para Fases Futuras
+
+Sempre que uma fase introduzir comandos, ferramentas ou procedimentos operacionais relevantes para estudo e operacao do laboratorio, avalie se os documentos em `docs/guides/` precisam ser atualizados.
+
+Nao crie um documento novo para cada pequeno assunto. Prefira atualizar um guia existente quando fizer sentido.
+
+Exemplos futuros:
+
+- Docker e execucao local: atualizar ou expandir o guia de execucao local.
+- Resiliencia: criar ou atualizar um guia apropriado.
+- OpenTelemetry, Grafana e Jaeger: criar um guia de observabilidade.
+- Kubernetes: criar um guia Kubernetes.
+- Load e chaos testing: registrar nos labs ou em guia dedicado quando o assunto crescer.
+
+## Fluxo Funcional Atual
+
+1. Cliente cria um pedido em `POST /orders`.
+2. `Order.Service` valida a entrada e consulta `Inventory.Service` via gRPC.
+3. Havendo estoque, `Order.Service` persiste o pedido como `Pending`.
+4. `Order.Service` publica `OrderCreated` no Kafka.
+5. `Payment.Service` consome `OrderCreated` e simula pagamento.
+6. `Payment.Service` publica `PaymentApproved` ou `PaymentRejected`.
+7. `Order.Service` consome o evento de pagamento e atualiza o status do pedido.
+8. `Audit.Worker` registra os principais eventos do sistema.
+
+## Topicos Kafka Ativos
+
+- `order-created`
+- `payment-approved`
+- `payment-rejected`
+
+Topico planejado somente para a futura expansao realtime:
+
+- `price-updated`
+
+Na FASE 6, `Payment.Service` consome `order-created` e publica `payment-approved` ou `payment-rejected`. `Order.Service` consome esses eventos e atualiza o status do pedido.
+
+Na FASE 7, `Audit.Worker` consome `order-created`, `payment-approved` e `payment-rejected`, registrando os envelopes reais no banco `audit_db`.
+
+## Roadmap
+
+### Parte I - Microservices Fundamentals
+
+| Fase | Descricao | Status |
+| ---- | --------- | ------ |
+| 0 | Estrutura | Concluido |
+| 1 | Order Service | Concluido |
+| 2 | Inventory Service | Concluido |
+| 3 | gRPC | Concluido |
+| 4 | Kafka producer | Concluido |
+| 4.1 | Validacao Kafka real | Concluido |
+| 5 | Payment Go | Concluido |
+| 6 | Eventos pagamento | Concluido |
+| 7 | Audit Worker | Concluido |
+| 8 | Docker Compose | Concluido |
+| 9 | Resiliencia | Concluido |
+| 10 | Observabilidade | Concluido |
+| 11 | Kubernetes | Concluido |
+| 12 | Labs/documentacao | Concluido |
+
+### Parte II - Realtime Distributed Systems
+
+| Fase | Descricao | Status |
+| ---- | --------- | ------ |
+| 13 | Realtime.PriceFeed Go | Pendente |
+| 14 | WebSocket/SSE | Pendente |
+| 15 | Kafka PriceUpdated | Pendente |
+| 16 | Pricing.Service .NET | Pendente |
+| 17 | Concorrencia/backpressure | Pendente |
+| 18 | Kubernetes scaling | Pendente |
+| 19 | Multiplas instancias PriceFeed | Pendente |
+| 20 | Ingester/Processor | Pendente |
+| 21 | Observabilidade realtime | Pendente |
+| 22 | Load/Chaos testing | Pendente |
+
+## Expansao Futura: Realtime Distributed Systems
+
+Apos a conclusao da FASE 12, o laboratorio sera expandido com `Realtime.PriceFeed`, um microservico Go voltado a processamento continuo de precos.
+
+O primeiro desenho conceitual sera:
+
+```text
+External Price Provider
+          |
+          | streaming / polling
+          v
+ Realtime.PriceFeed
+          Go
+          |
+          +-------> Kafka
+          |       price-updated
+          |
+          +-------> WebSocket / SSE
+                       |
+                       v
+                    Clients
+```
+
+Depois, a expansao evoluira para demonstrar interoperabilidade entre Go e .NET via Kafka:
+
+```text
+Realtime.PriceFeed
+        Go
+         |
+         | PriceUpdated
+         v
+       Kafka
+         |
+         v
+   Pricing.Service
+        .NET
+```
+
+Inicialmente, a fonte de precos sera um gerador local configuravel, por exemplo com `PRICE_EVENTS_PER_SECOND=100`, para permitir testes reprodutiveis sem depender de uma API externa.
+
+## Comandos
+
+Validar a solucao:
+
+```powershell
+dotnet build .\MicroservicesLab.sln
+dotnet test .\MicroservicesLab.sln
+```
+
+Inspecionar ferramentas locais:
+
+```powershell
+dotnet --version
+go version
+docker --version
+```
+
+Rodar migrations do `Order.Service`:
+
+```powershell
+dotnet ef database update --project .\src\services\Order.Service\Order.Service.csproj --startup-project .\src\services\Order.Service\Order.Service.csproj
+```
+
+Rodar migrations do `Inventory.Service`:
+
+```powershell
+dotnet ef database update --project .\src\services\Inventory.Service\Inventory.Service.csproj --startup-project .\src\services\Inventory.Service\Inventory.Service.csproj
+```
+
+Rodar o `Order.Service`:
+
+```powershell
+dotnet run --project .\src\services\Order.Service\Order.Service.csproj
+```
+
+Rodar o `Inventory.Service`:
+
+```powershell
+dotnet run --project .\src\services\Inventory.Service\Inventory.Service.csproj
+```
+
+## Endpoints Disponiveis na FASE 1
+
+Health checks:
+
+```text
+GET /health
+GET /health/live
+GET /health/ready
+```
+
+Pedidos:
+
+```text
+POST /orders
+GET /orders/{id}
+GET /orders
+```
+
+Exemplo:
+
+```powershell
+curl -X POST http://localhost:5074/orders `
+  -H "Content-Type: application/json" `
+  -d '{ "productId": "11111111-1111-1111-1111-111111111111", "quantity": 2 }'
+```
+
+Na FASE 1, o pedido e criado como `Pending` com `UnitPrice` e `TotalPrice` iguais a zero. A consulta de preco/estoque pertence ao `Inventory.Service` e sera integrada nas Fases 2 e 3.
+
+## Endpoints Disponiveis na FASE 2
+
+Health checks:
+
+```text
+GET /health
+GET /health/live
+GET /health/ready
+```
+
+Produtos:
+
+```text
+POST /products
+GET /products/{id}
+GET /products
+POST /products/{id}/availability
+POST /products/{id}/reserve
+```
+
+Exemplo:
+
+```powershell
+curl -X POST http://localhost:5276/products `
+  -H "Content-Type: application/json" `
+  -d '{ "name": "Notebook", "price": 3500.50, "availableQuantity": 10 }'
+```
+
+Na FASE 2, disponibilidade e reserva existem como operacoes HTTP administrativas/didaticas. Na FASE 3, essas mesmas capacidades serao expostas para `Order.Service` por gRPC.
+
+## Integracao gRPC Disponivel na FASE 3
+
+Contrato compartilhado:
+
+```text
+src/protos/inventory.proto
+```
+
+Operacoes gRPC:
+
+```text
+Inventory.CheckAvailability
+Inventory.ReserveStock
+```
+
+Fluxo atual do `POST /orders`:
+
+1. `Order.Service` valida `productId` e `quantity`.
+2. `Order.Service` chama `Inventory.Service` via gRPC usando `CheckAvailability`.
+3. Se o produto nao existir ou nao houver estoque suficiente, o pedido nao e persistido.
+4. Se houver estoque, o pedido e persistido como `Pending` usando o `UnitPrice` retornado pelo Inventory.
+
+Executar localmente em dois terminais:
+
+```powershell
+dotnet run --project .\src\services\Inventory.Service\Inventory.Service.csproj --launch-profile https
+dotnet run --project .\src\services\Order.Service\Order.Service.csproj --launch-profile http
+```
+
+Exemplo de criacao de pedido depois de cadastrar um produto no Inventory:
+
+```powershell
+curl -X POST http://localhost:5074/orders `
+  -H "Content-Type: application/json" `
+  -d '{ "productId": "<PRODUCT_ID>", "quantity": 2 }'
+```
+
+## Kafka Disponivel na FASE 4
+
+Contrato .NET compartilhado:
+
+```text
+src/building-blocks/Shared.Contracts
+```
+
+Topico publicado pelo `Order.Service`:
+
+```text
+order-created
+```
+
+Evento:
+
+```json
+{
+  "eventId": "uuid",
+  "eventType": "OrderCreated",
+  "occurredAt": "timestamp",
+  "correlationId": "trace-id-or-uuid",
+  "data": {
+    "orderId": "uuid",
+    "productId": "uuid",
+    "quantity": 2,
+    "unitPrice": 25.50,
+    "totalPrice": 51.00,
+    "status": "Pending",
+    "createdAt": "timestamp"
+  }
+}
+```
+
+Configurar Kafka no `Order.Service`:
+
+```json
+{
+  "Kafka": {
+    "BootstrapServers": "localhost:9092",
+    "OrderCreatedTopic": "order-created"
+  }
+}
+```
+
+Criar topicos quando houver um container Kafka chamado `kafka`:
+
+```powershell
+.\infra\kafka\create-topics.ps1
+```
+
+O Docker Compose completo foi introduzido na FASE 8. O Compose isolado de Kafka continua existindo para estudo e debug especifico.
+
+## Validacao Real do Kafka na FASE 4.1
+
+A FASE 4.1 adiciona um Kafka isolado para validar o producer do `Order.Service`. Ela nao substitui a FASE 8.
+
+```text
+FASE 4.1: Kafka isolado para validacao e aprendizado.
+FASE 8: toda a arquitetura executada via Docker Compose.
+```
+
+Subir Kafka local em modo KRaft:
+
+```powershell
+docker compose -f .\infra\kafka\docker-compose.kafka.yml up -d
+```
+
+Confirmar execucao:
+
+```powershell
+docker ps --filter "name=kafka"
+docker inspect kafka --format "{{json .State.Health}}"
+```
+
+Criar o topico `order-created`:
+
+```powershell
+.\infra\kafka\create-topics.ps1
+```
+
+Se o PowerShell bloquear scripts:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\infra\kafka\create-topics.ps1
+```
+
+Alternativa sem script:
+
+```powershell
+docker exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --if-not-exists --topic order-created --partitions 3 --replication-factor 1
+```
+
+Listar topicos:
+
+```powershell
+docker exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
+```
+
+Consumir `order-created` mostrando key e JSON:
+
+```powershell
+docker exec -it kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic order-created --from-beginning --property print.key=true --property key.separator=" | "
+```
+
+Subir os servicos para validar o fluxo completo:
+
+```powershell
+dotnet run --project .\src\services\Inventory.Service\Inventory.Service.csproj --launch-profile https
+dotnet run --project .\src\services\Order.Service\Order.Service.csproj --launch-profile http
+```
+
+Criar produto:
+
+```powershell
+curl -X POST http://localhost:5276/products `
+  -H "Content-Type: application/json" `
+  -d '{ "name": "Produto Kafka", "price": 100.00, "availableQuantity": 10 }'
+```
+
+Criar pedido usando o `id` retornado pelo produto:
+
+```powershell
+curl -X POST http://localhost:5074/orders `
+  -H "Content-Type: application/json" `
+  -d '{ "productId": "<PRODUCT_ID>", "quantity": 2 }'
+```
+
+O evento real deve aparecer no consumer com a key igual ao `OrderId`.
+
+Validacao executada na FASE 4.1:
+
+```text
+Produto: 3eb208f9-41fc-42f8-961a-1412b0ec4541 - Notebook Gamer
+Pedido: 93c03028-fa50-451c-94d6-def231caf1e3
+Kafka key: 93c03028-fa50-451c-94d6-def231caf1e3
+Topico: order-created
+```
+
+## Payment.Service Disponivel na FASE 5
+
+`Payment.Service` e um consumidor Kafka em Go.
+
+Nesta fase, ele consome `OrderCreated` do topico `order-created`, desserializa o envelope JSON produzido pelo `Order.Service`, valida o `eventType`, confirma a Kafka message key contra o `OrderId` e simula uma decisao de pagamento.
+
+Na FASE 6, ele tambem publica `payment-approved` ou `payment-rejected`. A persistencia de `Payment` em banco proprio ainda nao foi implementada.
+
+Executar o consumidor:
+
+```powershell
+cd .\src\services\Payment.Service
+go run .\cmd\payment-service
+```
+
+Configuracao por variaveis de ambiente:
+
+```text
+KAFKA_BROKERS=localhost:9092
+KAFKA_ORDER_CREATED_TOPIC=order-created
+KAFKA_PAYMENT_APPROVED_TOPIC=payment-approved
+KAFKA_PAYMENT_REJECTED_TOPIC=payment-rejected
+KAFKA_GROUP_ID=payment-service
+PAYMENT_MAX_AUTO_APPROVAL_AMOUNT=10000
+```
+
+Validar o modulo Go:
+
+```powershell
+cd .\src\services\Payment.Service
+go test ./...
+go build .\cmd\payment-service
+```
+
+Validacao real executada na FASE 5:
+
+```text
+Pedido: a3b3385d-7491-482a-bf18-5cf066a5fd21
+Evento: 29f06cdc-5606-4448-b820-a973601ffe8c
+Kafka key: a3b3385d-7491-482a-bf18-5cf066a5fd21
+OrderId: a3b3385d-7491-482a-bf18-5cf066a5fd21
+Resultado simulado: Approved
+```
+
+## Eventos de Pagamento Disponiveis na FASE 6
+
+Fluxo assincrono validado:
+
+```text
+POST /orders
+  -> Order.Service
+  -> order-created
+  -> Payment.Service
+  -> payment-approved ou payment-rejected
+  -> Order.Service
+  -> status Paid ou PaymentRejected
+```
+
+Topicos ativos:
+
+```text
+order-created
+payment-approved
+payment-rejected
+```
+
+Criar/listar topicos:
+
+```powershell
+.\infra\kafka\create-topics.ps1
+docker exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
+```
+
+Consumir evento aprovado:
+
+```powershell
+docker exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic payment-approved --from-beginning --property print.key=true --property key.separator=" | "
+```
+
+Consumir evento rejeitado:
+
+```powershell
+docker exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic payment-rejected --from-beginning --property print.key=true --property key.separator=" | "
+```
+
+Validacao real executada na FASE 6:
+
+```text
+PaymentApproved:
+Pedido: 5ab80059-0f78-422d-bce1-817e505a3beb
+Evento: b7ddb1aa-a82d-4ee8-9476-aaee2f91c2df
+Kafka key: 5ab80059-0f78-422d-bce1-817e505a3beb
+Status final do pedido: Paid
+
+PaymentRejected:
+Pedido: b4eb9ca0-8285-4e19-a897-f8c0ca8e53ca
+Evento: 562eb5f4-2bf0-4b85-9cfb-4fd1bdfdf449
+Kafka key: b4eb9ca0-8285-4e19-a897-f8c0ca8e53ca
+Status final do pedido: PaymentRejected
+```
+
+## Audit.Worker Disponivel na FASE 7
+
+`Audit.Worker` e um Worker Service .NET que consome eventos Kafka e grava historico em PostgreSQL.
+
+Topicos consumidos:
+
+```text
+order-created
+payment-approved
+payment-rejected
+```
+
+Banco:
+
+```text
+Audit.Worker -> audit_db
+Tabela: audit_events
+```
+
+Executar o worker:
+
+```powershell
+dotnet run --project .\src\workers\Audit.Worker\Audit.Worker.csproj
+```
+
+Aplicar migrations:
+
+```powershell
+dotnet ef database update --project .\src\workers\Audit.Worker\Audit.Worker.csproj --startup-project .\src\workers\Audit.Worker\Audit.Worker.csproj
+```
+
+Validacao real executada na FASE 7:
+
+```text
+Produto: 3eb208f9-41fc-42f8-961a-1412b0ec4541
+Pedido: de3bb377-05ed-4e93-a7b8-97ab26747528
+OrderCreated: ec01f81b-beba-4f90-aa20-f7f7c6a64521
+PaymentApproved: 4ae0e42c-8cc1-4a82-ad60-a47bd1b902eb
+Kafka key: de3bb377-05ed-4e93-a7b8-97ab26747528
+Key igual ao OrderId: sim
+Registros no audit_db: 2 para esse pedido
+```
+
+## Docker Compose Completo Disponivel na FASE 8
+
+O ambiente completo atual sobe pela raiz do repositorio:
+
+```powershell
+docker compose up -d --build
+```
+
+Servicos no Compose:
+
+```text
+postgres
+kafka
+kafka-init
+inventory-service
+order-service
+payment-service
+audit-worker
+otel-collector
+jaeger
+prometheus
+grafana
+```
+
+Portas expostas no host:
+
+```text
+PostgreSQL: 5432
+Kafka: 9092
+Inventory.Service HTTP: 5276
+Inventory.Service gRPC: 7242 -> container 8081
+Order.Service HTTP: 5074
+Jaeger: 16686
+Prometheus: 9090
+Grafana: 3000
+OTLP gRPC: 4317
+OTLP HTTP: 4318
+```
+
+O Compose usa volumes nomeados `postgres_data` e `kafka_data`. `docker compose down` preserva os dados; `docker compose down -v` apaga bancos, mensagens e offsets locais.
+
+Na FASE 8, migrations EF Core sao aplicadas automaticamente pelos servicos .NET quando `Database__ApplyMigrations=true` esta definido no Compose. Os bancos `order_db`, `inventory_db` e `audit_db` sao criados por `infra/postgres/init-databases.sql` na primeira inicializacao do volume PostgreSQL.
+
+Validacao real executada na FASE 8:
+
+```text
+Produto: 17aaa602-7840-4b42-abd4-7833e60efbe3 - Produto Compose Fase 8
+Pedido: cbe21f22-9290-462f-8656-f8242894b56c
+Status final: Paid
+OrderCreated: ff816e92-9dbe-42e4-bcf0-7daff86ac712
+PaymentApproved: d8c3bdd8-00d7-45ea-91c5-d165176befa0
+Kafka key: cbe21f22-9290-462f-8656-f8242894b56c
+Registros no audit_db: 2 para esse pedido
+```
+
+## Resiliencia Disponivel na FASE 9
+
+`Order.Service` aplica timeout, retry limitado e circuit breaker na chamada gRPC para `Inventory.Service`.
+
+Quando o Inventory esta indisponivel, `POST /orders` retorna `503 Service Unavailable`, nao persiste o pedido e nao publica `OrderCreated`. Quando o circuito esta aberto, chamadas seguintes falham rapido ate a janela de recuperacao.
+
+O comportamento com Kafka indisponivel foi observado e documentado como limite atual: o pedido pode ser salvo como `Pending` antes da publicacao do evento falhar. A correcao desse ponto exige Outbox Pattern e fica para fase futura.
+
+Guia:
+
+```text
+docs/guides/RESILIENCE.md
+```
+
+## Observabilidade Disponivel na FASE 10
+
+O Compose inclui OpenTelemetry Collector, Jaeger, Prometheus e Grafana. O fluxo `POST /orders -> gRPC -> Kafka -> Payment -> Kafka -> Order/Audit` gera traces distribuidos, metricas e logs correlacionados por `TraceId`.
+
+Guia:
+
+```text
+docs/guides/OBSERVABILITY.md
+```
+
+## Kubernetes Disponivel na FASE 11
+
+O ambiente tambem pode rodar em Kubernetes local usando os manifests em `k8s/`.
+
+```powershell
+docker compose build inventory-service order-service payment-service audit-worker
+kubectl apply -k k8s
+kubectl get pods -n microservices-lab
+```
+
+Guia:
+
+```text
+docs/guides/KUBERNETES.md
+```
+
+## Labs e Fechamento Disponiveis na FASE 12
+
+A FASE 12 consolidou a documentacao operacional da Parte I, criou labs repetiveis e registrou troubleshooting para Docker Compose, Kafka, PostgreSQL, resiliencia, observabilidade e Kubernetes.
+
+Entrada principal:
+
+```text
+docs/labs/README.md
+```
+
+Guias de apoio:
+
+```text
+docs/guides/QUICK-REFERENCE.md
+docs/guides/TROUBLESHOOTING.md
+```
+
+## Proximos Passos
+
+A Parte I do MicroservicesLab esta concluida.
+
+A proxima trilha possivel e a Parte II, iniciando pela FASE 13: `Realtime.PriceFeed` em Go. Ela nao deve ser iniciada automaticamente. Use uma instrucao explicita quando quiser avancar:
+
+```text
+Avance para a FASE 13.
+```
