@@ -27,22 +27,66 @@ A Parte I esta concluida. A Parte II esta registrada para orientar a proxima tri
 
 | Fase | Descricao | Status |
 | ---- | --------- | ------ |
-| 13 | Realtime.PriceFeed Go | Pendente |
-| 14 | WebSocket/SSE | Pendente |
-| 15 | Kafka PriceUpdated | Pendente |
+| 13 | PriceFeed.Service Go | Pendente |
+| 14 | Realtime Delivery - SSE vs WebSocket | Pendente |
+| 15 | Kafka PriceUpdated stream | Pendente |
 | 16 | Pricing.Service .NET | Pendente |
-| 17 | Concorrencia/backpressure | Pendente |
-| 18 | Kubernetes scaling | Pendente |
-| 19 | Multiplas instancias PriceFeed | Pendente |
+| 17 | Concorrencia e backpressure | Pendente |
+| 18 | Consumer scaling | Pendente |
+| 19 | Multiplas instancias e partitioning | Pendente |
 | 20 | Ingester/Processor | Pendente |
-| 21 | Observabilidade realtime | Pendente |
-| 22 | Load/Chaos testing | Pendente |
+| 21 | Realtime observability | Pendente |
+| 22 | Load e chaos testing | Pendente |
 
 ## Objetivo da Parte II
 
-Estudar processamento de dados em tempo real usando Go, Kafka, WebSocket/SSE, Kubernetes e observabilidade.
+Estudar sistemas distribuidos realtime com foco em fluxo continuo de dados, concorrencia, throughput, backpressure, processamento distribuido, consumer lag, particionamento, escalabilidade e comportamento sob carga/falhas.
 
-O novo servico principal sera `Realtime.PriceFeed`, implementado em Go para explorar:
+A progressao conceitual da Parte II e:
+
+```text
+gerar/ingerir dados continuamente
+        |
+        v
+entregar dados em realtime
+        |
+        v
+distribuir eventos
+        |
+        v
+processar eventos
+        |
+        v
+lidar com produtor mais rapido que consumidor
+        |
+        v
+escalar consumidores
+        |
+        v
+entender partitions e multiplas instancias
+        |
+        v
+separar ingestao e processamento
+        |
+        v
+observar o pipeline realtime
+        |
+        v
+testar carga e falhas
+```
+
+Kubernetes, Kafka e observabilidade continuam importantes, mas na Parte II eles serao usados para estudar comportamento de streaming e distribuicao, nao apenas para repetir conceitos ja cobertos na Parte I.
+
+## Blocos Conceituais da Parte II
+
+| Bloco | Fases | Foco |
+| ----- | ----- | ---- |
+| A - Realtime | 13-16 | fluxo continuo, entrega realtime, Kafka e interoperabilidade Go -> .NET |
+| B - Concorrencia e distribuicao | 17-19 | backpressure, consumer lag, scaling, partitions e multiplas instancias |
+| C - Arquitetura | 20 | separacao entre ingestion e processing |
+| D - Operacao | 21-22 | metricas realtime, carga, chaos e recuperacao |
+
+O novo servico principal sera `PriceFeed.Service`, implementado em Go para explorar:
 
 - processamento concorrente;
 - goroutines;
@@ -57,17 +101,17 @@ O novo servico principal sera `Realtime.PriceFeed`, implementado em Go para expl
 ## Arquitetura Conceitual Inicial
 
 ```text
-External Price Provider
+PriceProvider
           |
-          | streaming / polling
           v
- Realtime.PriceFeed
+   PriceFeed.Service
           Go
           |
           +-------> Kafka
           |       price-updated
           |
-          +-------> WebSocket / SSE
+          +-------> Realtime Delivery
+                  SSE ou WebSocket
                        |
                        v
                     Clients
@@ -76,20 +120,20 @@ External Price Provider
 ## Evolucao Planejada
 
 ```text
-External Price Provider
-          |
-          v
-   Realtime.PriceFeed
-          Go
-          |
-          v
-        Kafka
-    price-updated
-          |
-     +----+----------------+
-     |                     |
-     v                     v
-Pricing.Service       outros consumers
+PriceProvider
+      |
+      v
+PriceFeed.Service
+      |
+      v
+   Publisher
+      |
+      v
+    Kafka
+ price-updated
+      |
+      v
+Pricing.Service
      .NET
 ```
 
@@ -110,16 +154,42 @@ Nenhum servico deve depender da linguagem utilizada pelo outro. A integracao dev
 
 ## Fonte de Precos
 
-A expansao nao dependera inicialmente de API financeira externa. Um `Price Generator` simulara atualizacoes como:
+A expansao nao dependera inicialmente de API financeira externa. A origem dos precos deve ficar atras de uma abstracao conceitual `PriceProvider`:
 
 ```text
-PETR4 -> 32.45
-PETR4 -> 32.47
-VALE3 -> 71.20
-BTCUSD -> 68234.00
+PriceProvider
+      |
+      +-- MockPriceProvider
+      |
+      +-- fonte externa futura
 ```
 
-O gerador devera permitir controle de frequencia com configuracao semelhante a `PRICE_EVENTS_PER_SECOND=100`.
+Responsabilidades conceituais:
+
+- `PriceProvider`: de onde vem os precos;
+- `PriceFeed`: como o servico trabalha com o fluxo continuo;
+- `Publisher`: para onde os precos sao enviados.
+
+O `MockPriceProvider` inicial deve representar um pequeno mercado simulado com preco inicial, pequenas oscilacoes, multiplos simbolos e intervalo configuravel. A ideia nao e gerar valores totalmente aleatorios e independentes; e produzir uma serie plausivel:
+
+```text
+PETR4 = 38.10
+PETR4 = 38.12
+PETR4 = 38.09
+PETR4 = 38.11
+```
+
+Simbolos candidatos para os labs:
+
+```text
+PETR4
+VALE3
+ITUB4
+WEGE3
+PRIO3
+```
+
+O intervalo de geracao devera permitir experimentos como `500ms`, `100ms`, `10ms` e `1ms`, respeitando os limites do ambiente local.
 
 ## Evento PriceUpdated
 
@@ -139,23 +209,74 @@ Contrato inicial planejado:
 
 O contrato definitivo podera ser refinado durante a implementacao, mantendo independencia de linguagem.
 
-## Laboratorios Realtime Planejados
-
-Os laboratorios serao adicionados posteriormente em `docs/labs/realtime/`:
+Na FASE 15, `symbol` e a hipotese inicial para Kafka message key. Isso deve permitir estudar ordenacao por ativo dentro de uma partition:
 
 ```text
-LAB-RT-01-price-generator.md
-LAB-RT-02-goroutines.md
-LAB-RT-03-channels.md
-LAB-RT-04-websocket-sse.md
-LAB-RT-05-kafka-producer.md
-LAB-RT-06-go-to-dotnet.md
-LAB-RT-07-load-test.md
-LAB-RT-08-backpressure.md
-LAB-RT-09-kafka-lag.md
-LAB-RT-10-kubernetes-scaling.md
-LAB-RT-11-multiple-pricefeeds.md
-LAB-RT-12-ingester-processor.md
-LAB-RT-13-observability.md
-LAB-RT-14-chaos.md
+PETR4 -> mesma partition para eventos de PETR4
+VALE3 -> possivelmente outra partition
 ```
+
+Essa decisao devera ser validada na implementacao, porque uma key tambem influencia distribuicao de carga.
+
+## Planejamento das Fases 13-22
+
+| Fase | Nome | Objetivo principal | Conceitos estudados | Status |
+| ---- | ---- | ------------------ | ------------------- | ------ |
+| 13 | PriceFeed.Service Go | Criar um servico Go responsavel por fornecer um fluxo continuo de precos, iniciando com fonte simulada dinamica e desacoplada. | goroutines, channels, `context.Context`, fluxo continuo, configuracao, `PriceProvider`, `Publisher` | Pendente |
+| 14 | Realtime Delivery - SSE vs WebSocket | Estudar requisitos de entrega backend -> cliente e escolher conscientemente entre SSE e WebSocket antes de implementar o necessario. | SSE, WebSocket, fluxo unidirecional, conexoes longas, clientes realtime | Pendente |
+| 15 | Kafka PriceUpdated stream | Distribuir o fluxo de precos por Kafka usando eventos `PriceUpdated`. | throughput, partitions, ordering por key, `symbol` como key candidata, stream de eventos | Pendente |
+| 16 | Pricing.Service .NET | Consumir `price-updated` em .NET e manter ultimo preco conhecido por simbolo. | interoperabilidade Go -> Kafka -> .NET, contratos independentes de linguagem, estado derivado simples | Pendente |
+| 17 | Concorrencia e backpressure | Criar situacoes em que o producer e mais rapido que o consumer e observar limites do pipeline. | goroutines, buffered/unbuffered channels, worker pool, fan-out/fan-in, buffer cheio, consumer lag | Pendente |
+| 18 | Consumer scaling | Estudar como replicas de consumers se relacionam com partitions dentro de um consumer group. | consumer groups, partition assignment, rebalance, consumers x partitions, scaling util versus inutil | Pendente |
+| 19 | Multiplas instancias e partitioning | Aprofundar como Kafka distribui trabalho e preserva ordenacao com multiplas instancias. | key, partition, ownership, ordering por simbolo, rebalance, comportamento distribuido real | Pendente |
+| 20 | Ingester/Processor | Separar conceitualmente ingestao e processamento do pipeline realtime. | ingestion, normalization, validation, processing, aggregation, estado derivado | Pendente |
+| 21 | Realtime observability | Usar a observabilidade existente para responder perguntas especificas de streaming. | events/s, latencia, consumer lag, buffer usage, drops, active connections, dashboard realtime | Pendente |
+| 22 | Load e chaos testing | Avaliar ate onde o sistema funciona e como falha sob carga e falhas controladas. | throughput, latencia, CPU, memoria, lag, recuperacao, degradacao, chaos controlado | Pendente |
+
+## Distincao Entre FASE 18 e FASE 19
+
+A FASE 18 responde:
+
+```text
+O que acontece quando aumentamos consumers?
+```
+
+Ela compara cenarios como:
+
+```text
+Topic: 3 partitions
+
+1 consumer  -> 3 partitions
+2 consumers -> 3 partitions distribuidas
+3 consumers -> 1 partition por consumer
+5 consumers -> 2 consumers ociosos no mesmo group
+```
+
+A FASE 19 responde:
+
+```text
+Como Kafka distribui trabalho e preserva ordenacao quando existem multiplas instancias?
+```
+
+Ela aprofunda `key`, `partition`, `consumer group`, `partition ownership`, `ordering` e `rebalance`, usando `symbol` como exemplo natural.
+
+## Laboratorios Realtime Planejados
+
+Os laboratorios serao adicionados posteriormente em `docs/labs/realtime/`. A lista abaixo e planejada e podera ser ajustada durante cada fase:
+
+```text
+LAB-RT-01-price-provider.md
+LAB-RT-02-realtime-delivery.md
+LAB-RT-03-kafka-price-updated.md
+LAB-RT-04-pricing-service.md
+LAB-RT-05-backpressure.md
+LAB-RT-06-consumer-scaling.md
+LAB-RT-07-partitioning-and-ordering.md
+LAB-RT-08-ingester-processor.md
+LAB-RT-09-realtime-observability.md
+LAB-RT-10-load-and-chaos.md
+```
+
+## Fora de Escopo por Enquanto
+
+Nao adicionar tecnologias apenas para aumentar a stack. Redis, RabbitMQ, MongoDB, Elasticsearch, API Gateway, Service Mesh, Helm, ArgoCD, Terraform ou cloud deverao ser avaliados somente se uma necessidade concreta aparecer em fase futura.

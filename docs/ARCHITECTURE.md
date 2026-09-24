@@ -49,19 +49,25 @@ Ele nao participa do fluxo transacional principal. Isso reforca a ideia de consu
 
 Na FASE 7, `Audit.Worker` consome `order-created`, `payment-approved` e `payment-rejected` com o consumer group `audit-worker`. Cada envelope recebido e gravado no banco `audit_db`, na tabela `audit_events`, preservando payload JSON, `eventId`, `eventType`, topic, Kafka key, partition, offset, `correlationId`, `occurredAt` e `auditedAt`.
 
-### Realtime.PriceFeed
+### PriceFeed.Service
 
 Servico planejado para a Parte II, nao implementado na Parte I.
 
-Sera escrito em Go para estudar processamento realtime, goroutines, channels, streaming, conexoes longas, alto volume de mensagens, baixo overhead e integracao com Kafka. A escolha de Go aqui e intencional: esse workload tem caracteristicas diferentes dos servicos de negocio da Parte I.
+Sera escrito em Go para estudar fluxo continuo de precos, goroutines, channels, streaming, conexoes longas, alto volume de mensagens, baixo overhead, backpressure e integracao com Kafka. A escolha de Go aqui e intencional: esse workload tem caracteristicas diferentes dos servicos de negocio da Parte I.
 
-O servico gerara ou recebera atualizacoes de precos, publicara `PriceUpdated` no Kafka e distribuira atualizacoes a clientes via WebSocket ou Server-Sent Events.
+O servico fornecera ou ingerira atualizacoes de precos, com origem desacoplada por uma abstracao conceitual `PriceProvider`. A implementacao inicial sera um `MockPriceProvider`, mas o nucleo do servico nao deve depender de uma fonte simulada especifica.
+
+Responsabilidades conceituais:
+
+- `PriceProvider`: de onde vem os precos;
+- `PriceFeed`: como o servico trabalha com o fluxo continuo;
+- `Publisher`: para onde os precos sao enviados, como entrega realtime ou Kafka.
 
 ### Pricing.Service
 
 Servico planejado para a Parte II, nao implementado na Parte I.
 
-Sera escrito em .NET e consumira eventos `PriceUpdated` publicados pelo `Realtime.PriceFeed`. O objetivo principal sera demonstrar interoperabilidade entre Go e .NET atraves de contratos independentes de linguagem e Kafka.
+Sera escrito em .NET e consumira eventos `PriceUpdated` publicados pelo `PriceFeed.Service`. O objetivo principal sera demonstrar interoperabilidade entre Go e .NET atraves de contratos independentes de linguagem e Kafka.
 
 ## Dono dos Dados
 
@@ -73,7 +79,7 @@ Cada servico controla suas proprias tabelas ou banco:
 | Inventory.Service | `Product` |
 | Payment.Service | sem persistencia propria na FASE 8 |
 | Audit.Worker | `AuditEvent` em `audit_db` |
-| Realtime.PriceFeed | eventos de preco em memoria/stream, planejado para a Parte II |
+| PriceFeed.Service | eventos de preco em memoria/stream, planejado para a Parte II |
 | Pricing.Service | ultimo preco conhecido por simbolo, planejado para a Parte II |
 
 Nenhum servico acessara tabelas de outro servico. Essa regra evita acoplamento por banco, que costuma parecer simples no inicio e caro quando a arquitetura precisa evoluir.
@@ -105,6 +111,8 @@ Na FASE 8, o ambiente completo roda via `docker compose up -d --build`. Dentro d
 O Compose principal cria topicos Kafka por meio do servico `kafka-init` e usa volumes nomeados `postgres_data` e `kafka_data`. As migrations EF Core de `Order.Service`, `Inventory.Service` e `Audit.Worker` sao aplicadas na inicializacao quando `Database__ApplyMigrations=true` esta configurado.
 
 Na Parte II, Kafka tambem sera usado para demonstrar interoperabilidade entre Go e .NET com o topico `price-updated`. O produtor Go nao dependera de tipos .NET, e o consumidor .NET nao dependera de tipos Go. A integracao acontecera pelo contrato do evento.
+
+Na FASE 15, `symbol` sera a key candidata do Kafka para estudar ordenacao por ativo dentro de uma partition. Essa escolha tambem devera ser observada do ponto de vista de distribuicao de carga, porque keys muito concentradas podem limitar paralelismo.
 
 ## Envelope de Eventos
 
@@ -180,7 +188,7 @@ O ambiente Docker Compose inclui OpenTelemetry Collector, Jaeger, Prometheus e G
 
 O dashboard provisionado em Grafana acompanha requisicoes HTTP, duracao, pedidos criados/rejeitados, pagamentos aprovados/rejeitados e falhas da dependencia Inventory.
 
-Na Parte II, a observabilidade sera expandida para medir eventos por segundo, erros, latencia, Kafka consumer lag, CPU, memoria e quantidade de conexoes realtime.
+Na Parte II, a observabilidade sera expandida para responder perguntas especificas de streaming: quantos eventos por segundo entram, quantos sao processados, qual e a latencia, se o consumer lag cresce, se existe pressao em buffers/channels, se eventos estao sendo descartados e quantos clientes realtime estao conectados.
 
 ## Kubernetes
 
@@ -194,7 +202,7 @@ PostgreSQL e Kafka rodam dentro do cluster para a finalidade didatica da fase. A
 
 `Inventory.Service` foi usado para demonstrar replicas, self-healing e rolling update. Ao apagar manualmente um Pod, o Deployment criou outro para restaurar o desired state. O rolling update foi validado trocando a imagem para `microservices-lab-inventory-service:phase11-v2` sem derrubar todas as replicas simultaneamente.
 
-Na Parte II, Kubernetes sera usado para estudar escalabilidade horizontal de `Realtime.PriceFeed` e `Pricing.Service`. Um ponto importante sera relacionar replicas, partitions Kafka e consumer groups, mostrando por que aumentar replicas nem sempre aumenta throughput.
+Na Parte II, Kubernetes podera ser usado para materializar replicas de consumers, mas nao sera o conceito principal das fases 18 e 19. O foco sera relacionar replicas, partitions Kafka, consumer groups, partition assignment, rebalance e ordering, mostrando por que aumentar replicas alem do numero de partitions nao aumenta indefinidamente o paralelismo dentro do mesmo consumer group.
 
 ## Fechamento da Parte I
 
@@ -261,23 +269,23 @@ Kafka: OrderCreated nao existe
 
 Esse e um limite importante da arquitetura atual: PostgreSQL e Kafka nao participam da mesma transacao. O Outbox Pattern podera ser usado futuramente para persistir o evento junto com a alteracao do banco e publica-lo de forma confiavel, mas ele nao sera implementado nesta etapa.
 
-Na expansao realtime, tambem sera estudado o problema de multiplas instancias de um ingester lendo a mesma fonte externa. O laboratorio devera comparar alternativas como leader election, distributed lock, particionamento da fonte, separacao entre ingestion e processing e idempotencia, mas sem implementar todas de uma vez.
+Na expansao realtime, tambem sera estudado o problema de multiplas instancias trabalhando sobre streams particionados. A FASE 18 observara consumer scaling em consumer groups; a FASE 19 aprofundara partitioning, ownership e ordering. O laboratorio podera comparar alternativas como leader election, distributed lock, particionamento da fonte, separacao entre ingestion e processing e idempotencia, mas sem implementar todas de uma vez.
 
 ## Expansao Realtime Planejada
 
-### FASE 13 - Realtime.PriceFeed
+### FASE 13 - PriceFeed.Service
 
-Criar `src/services/Realtime.PriceFeed/` em Go para gerar ou receber atualizacoes de precos, processar dados continuamente, usar goroutines e channels quando fizer sentido, expor health checks, logs estruturados e graceful shutdown.
+Criar um servico Go responsavel por fornecer um fluxo continuo de precos ao sistema, com `PriceProvider` desacoplado da logica principal. A implementacao inicial sera um `MockPriceProvider` com preco inicial, pequenas oscilacoes, multiplos simbolos e intervalo configuravel.
 
 Documentar as goroutines, responsabilidades, channels, ciclo de vida e cancelamento com `context.Context`.
 
-### FASE 14 - Streaming para clientes
+### FASE 14 - Realtime Delivery - SSE vs WebSocket
 
-Adicionar WebSocket ou Server-Sent Events. A escolha inicial deve favorecer simplicidade didatica para visualizar atualizacoes sem polling HTTP manual.
+Estudar SSE e WebSocket para entrega realtime. Como o fluxo inicial e principalmente backend -> cliente, SSE pode ser suficiente, mas a fase deve escolher conscientemente a abordagem antes de implementar somente o necessario.
 
 ### FASE 15 - Kafka PriceUpdated
 
-Publicar `PriceUpdated` no topico `price-updated`, estudando producer, partitions, message key, ordering, throughput, serializacao, retries e delivery semantics.
+Publicar `PriceUpdated` no topico `price-updated`, estudando producer, partitions, message key, ordering, throughput, serializacao, retries e delivery semantics em fluxo continuo.
 
 `symbol` sera o candidato inicial a message key, porque preserva ordenacao por ativo dentro de uma partition, mas tambem concentra carga se poucos simbolos forem muito ativos.
 
@@ -289,13 +297,15 @@ Criar `Pricing.Service` para consumir `price-updated` produzido pelo servico Go 
 
 Criar experimentos com volumes como 100, 1.000 e 10.000 eventos por segundo, ajustando conforme o ambiente local. O objetivo e observar o comportamento quando producao e maior que capacidade de consumo.
 
-### FASE 18 - Escalabilidade no Kubernetes
+Relacionar conceitos Go como goroutines, buffered channels, unbuffered channels, blocking, worker pool, fan-out/fan-in e buffer cheio com conceitos Kafka como producer throughput, consumer throughput e consumer lag.
 
-Executar `Realtime.PriceFeed` e `Pricing.Service` no Kubernetes, estudar replicas, Deployments, Services, HPA, CPU, memoria e distribuicao de carga.
+### FASE 18 - Consumer scaling
 
-### FASE 19 - Multiplas instancias PriceFeed
+Estudar como o numero de consumers se relaciona com o numero de partitions dentro de um mesmo consumer group. Kubernetes pode fornecer replicas, mas o conceito principal e Kafka consumer scaling.
 
-Criar laboratorio para observar o que acontece quando varias replicas do PriceFeed consomem a mesma fonte externa e podem gerar eventos duplicados. Escolher uma solucao adequada para o laboratorio e documentar trade-offs.
+### FASE 19 - Multiplas instancias e partitioning
+
+Aprofundar como Kafka distribui trabalho e preserva ordenacao quando existem multiplas instancias. Trabalhar `key`, `partition`, `consumer group`, `partition ownership`, `ordering` e `rebalance`, usando `symbol` como exemplo natural.
 
 ### FASE 20 - Separacao Ingester / Processor
 
@@ -303,8 +313,8 @@ Evoluir conceitualmente para `Price.Ingester -> Kafka price-raw -> Processors ->
 
 ### FASE 21 - Observabilidade Realtime
 
-Instrumentar o pipeline realtime usando a infraestrutura de observabilidade criada anteriormente sempre que possivel. Criar um dashboard didatico para acompanhar o PriceFeed.
+Instrumentar o pipeline realtime usando a infraestrutura de observabilidade criada anteriormente sempre que possivel. Criar um dashboard didatico para acompanhar eventos recebidos/processados, eventos por segundo, latencia, consumer lag, uso de buffer/channel, eventos descartados e conexoes realtime ativas.
 
 ### FASE 22 - Testes de carga e caos
 
-Criar laboratorios para aumentar volume de eventos, derrubar producer/consumer, reiniciar Kafka, remover Pods, escalar replicas, gerar consumer lag e observar recuperacao.
+Criar laboratorios para aumentar volume de eventos, derrubar producer/consumer, reiniciar Kafka, remover Pods, escalar/reduzir replicas, gerar consumer lag e observar degradacao e recuperacao. A pergunta deixa de ser "funciona?" e passa a ser "ate onde funciona e como falha?".

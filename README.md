@@ -29,7 +29,7 @@ flowchart TD
 
 - .NET 9 para `Order.Service`, `Inventory.Service`, `Audit.Worker` e `Shared.Contracts`.
 - Go para `Payment.Service`.
-- Go para a futura expansao `Realtime.PriceFeed`, onde a linguagem sera usada de forma intencional para concorrencia, streaming e conexoes de longa duracao.
+- Go para a futura expansao `PriceFeed.Service`, onde a linguagem sera usada de forma intencional para concorrencia, streaming e conexoes de longa duracao.
 - PostgreSQL com bancos independentes por servico.
 - gRPC para a consulta de estoque entre Order e Inventory.
 - Kafka para eventos de dominio e comunicacao assincrona.
@@ -175,44 +175,44 @@ Na FASE 7, `Audit.Worker` consome `order-created`, `payment-approved` e `payment
 
 | Fase | Descricao | Status |
 | ---- | --------- | ------ |
-| 13 | Realtime.PriceFeed Go | Pendente |
-| 14 | WebSocket/SSE | Pendente |
-| 15 | Kafka PriceUpdated | Pendente |
+| 13 | PriceFeed.Service Go | Pendente |
+| 14 | Realtime Delivery - SSE vs WebSocket | Pendente |
+| 15 | Kafka PriceUpdated stream | Pendente |
 | 16 | Pricing.Service .NET | Pendente |
-| 17 | Concorrencia/backpressure | Pendente |
-| 18 | Kubernetes scaling | Pendente |
-| 19 | Multiplas instancias PriceFeed | Pendente |
+| 17 | Concorrencia e backpressure | Pendente |
+| 18 | Consumer scaling | Pendente |
+| 19 | Multiplas instancias e partitioning | Pendente |
 | 20 | Ingester/Processor | Pendente |
-| 21 | Observabilidade realtime | Pendente |
-| 22 | Load/Chaos testing | Pendente |
+| 21 | Realtime observability | Pendente |
+| 22 | Load e chaos testing | Pendente |
 
 ## Expansao Futura: Realtime Distributed Systems
 
-Apos a conclusao da FASE 12, o laboratorio sera expandido com `Realtime.PriceFeed`, um microservico Go voltado a processamento continuo de precos.
+A Parte II expandira o laboratorio com `PriceFeed.Service`, um microservico Go voltado a fluxo continuo de precos, concorrencia, throughput, backpressure, particionamento, consumer lag, escalabilidade e comportamento sob carga/falhas.
 
-O primeiro desenho conceitual sera:
+O primeiro desenho conceitual sera desacoplado da fonte real de precos:
 
 ```text
-External Price Provider
-          |
-          | streaming / polling
-          v
- Realtime.PriceFeed
-          Go
-          |
-          +-------> Kafka
-          |       price-updated
-          |
-          +-------> WebSocket / SSE
-                       |
-                       v
-                    Clients
+PriceProvider
+      |
+      +-- MockPriceProvider
+      |
+      +-- fonte externa futura
+      |
+      v
+PriceFeed.Service
+      |
+      +-- Realtime Delivery
+      |
+      +-- Kafka price-updated
 ```
+
+O `MockPriceProvider` inicial deve simular pequenas oscilacoes em multiplos simbolos, em vez de gerar valores aleatorios desconectados. O intervalo de geracao sera configuravel para permitir experimentos de throughput e backpressure.
 
 Depois, a expansao evoluira para demonstrar interoperabilidade entre Go e .NET via Kafka:
 
 ```text
-Realtime.PriceFeed
+PriceFeed.Service
         Go
          |
          | PriceUpdated
@@ -224,7 +224,9 @@ Realtime.PriceFeed
         .NET
 ```
 
-Inicialmente, a fonte de precos sera um gerador local configuravel, por exemplo com `PRICE_EVENTS_PER_SECOND=100`, para permitir testes reprodutiveis sem depender de uma API externa.
+Na FASE 14, a escolha entre SSE e WebSocket devera ser feita com base nos requisitos reais de entrega. Como o fluxo inicial e principalmente backend -> cliente, SSE pode ser suficiente, mas a decisao final fica para a propria fase.
+
+Na FASE 15, `symbol` sera a key candidata do Kafka para estudar ordenacao por ativo dentro de partitions. Nas Fases 18 e 19, Kubernetes podera ser usado para subir replicas, mas o conceito principal sera a relacao entre consumer groups, partitions, ownership, rebalance e ordering.
 
 ## Comandos
 
@@ -762,7 +764,7 @@ docs/guides/TROUBLESHOOTING.md
 
 A Parte I do MicroservicesLab esta concluida.
 
-A proxima trilha possivel e a Parte II, iniciando pela FASE 13: `Realtime.PriceFeed` em Go. Ela nao deve ser iniciada automaticamente. Use uma instrucao explicita quando quiser avancar:
+A proxima trilha possivel e a Parte II, iniciando pela FASE 13: `PriceFeed.Service` em Go. Ela nao deve ser iniciada automaticamente. Use uma instrucao explicita quando quiser avancar:
 
 ```text
 Avance para a FASE 13.

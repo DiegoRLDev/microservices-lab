@@ -28,16 +28,16 @@ O laboratorio esta organizado em duas partes:
 
 | Fase | Descricao | Status |
 | ---- | --------- | ------ |
-| 13 | Realtime.PriceFeed Go | Pendente |
-| 14 | WebSocket/SSE | Pendente |
-| 15 | Kafka PriceUpdated | Pendente |
+| 13 | PriceFeed.Service Go | Pendente |
+| 14 | Realtime Delivery - SSE vs WebSocket | Pendente |
+| 15 | Kafka PriceUpdated stream | Pendente |
 | 16 | Pricing.Service .NET | Pendente |
-| 17 | Concorrencia/backpressure | Pendente |
-| 18 | Kubernetes scaling | Pendente |
-| 19 | Multiplas instancias PriceFeed | Pendente |
+| 17 | Concorrencia e backpressure | Pendente |
+| 18 | Consumer scaling | Pendente |
+| 19 | Multiplas instancias e partitioning | Pendente |
 | 20 | Ingester/Processor | Pendente |
-| 21 | Observabilidade realtime | Pendente |
-| 22 | Load/Chaos testing | Pendente |
+| 21 | Realtime observability | Pendente |
+| 22 | Load e chaos testing | Pendente |
 
 ## Regra de execucao
 
@@ -62,9 +62,18 @@ dotnet build .\MicroservicesLab.sln
 
 ## Expansao registrada
 
-A expansao futura adicionara `Realtime.PriceFeed` em Go para estudar processamento de dados em tempo real com Kafka, WebSocket/SSE, Kubernetes e observabilidade.
+A expansao futura adicionara `PriceFeed.Service` em Go para estudar fluxo continuo de dados, concorrencia, throughput, backpressure, particionamento, consumer lag, escalabilidade e comportamento sob carga/falhas.
 
 Tambem esta planejado `Pricing.Service` em .NET para consumir `PriceUpdated` e demonstrar interoperabilidade Go -> Kafka -> .NET usando contratos independentes de linguagem.
+
+A Parte II sera organizada em quatro blocos conceituais:
+
+- Realtime: Fases 13-16;
+- Concorrencia e distribuicao: Fases 17-19;
+- Arquitetura: Fase 20;
+- Operacao: Fases 21-22.
+
+Na FASE 13, a origem dos precos devera ficar desacoplada por uma abstracao conceitual `PriceProvider`, com `MockPriceProvider` como implementacao inicial. Na FASE 15, `symbol` sera a key candidata do Kafka para estudar ordenacao por ativo. Na FASE 18, o foco sera consumer scaling em consumer groups; na FASE 19, o foco sera partitioning, ownership e ordering com multiplas instancias.
 
 ## FASE 1 - Order.Service
 
