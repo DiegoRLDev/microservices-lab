@@ -1,0 +1,21 @@
+@Order.Service_HostAddress = http://localhost:5074
+
+GET {{Order.Service_HostAddress}}/health/live
+Accept: application/json
+
+###
+
+POST {{Order.Service_HostAddress}}/orders
+Content-Type: application/json
+
+{
+  "productId": "11111111-1111-1111-1111-111111111111",
+  "quantity": 2
+}
+
+###
+
+GET {{Order.Service_HostAddress}}/orders
+Accept: application/json
+
+###
