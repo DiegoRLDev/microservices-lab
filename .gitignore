@@ -1,0 +1,35 @@
+# .NET
+bin/
+obj/
+TestResults/
+
+# Go
+*.exe
+*.test
+coverage.out
+coverage/
+
+# User/local files
+*.user
+*.suo
+.vs/
+.idea/
+.vscode/
+
+# Environment files
+.env
+.env.*
+
+# Logs and local data
+logs/
+*.log
+*.db
+*.sqlite
+*.sqlite3
+*.bak
+
+# Local secrets/certificates
+*.pem
+*.key
+*.pfx
+*.p12
