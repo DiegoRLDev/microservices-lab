@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: order-config
+data:
+  ASPNETCORE_ENVIRONMENT: Development
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+  OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+  Database__ApplyMigrations: "true"
+  Kestrel__Endpoints__Http__Url: http://+:8080
+  Kestrel__Endpoints__Http__Protocols: Http1
+  ConnectionStrings__OrdersDb: Host=postgres;Port=5432;Database=order_db;Username=postgres;Password=postgres
+  InventoryGrpc__Address: http://inventory-service:8081
+  Kafka__BootstrapServers: kafka:29092
+  Kafka__OrderCreatedTopic: order-created
+  Kafka__PaymentApprovedTopic: payment-approved
+  Kafka__PaymentRejectedTopic: payment-rejected
+  Kafka__PaymentEventsConsumerGroup: order-service-payment-events
+  Resilience__Inventory__TimeoutSeconds: "2"
+  Resilience__Inventory__RetryAttempts: "2"
+  Resilience__Inventory__RetryDelayMilliseconds: "200"
+  Resilience__Inventory__CircuitBreakerFailureThreshold: "3"
+  Resilience__Inventory__CircuitBreakerOpenSeconds: "10"

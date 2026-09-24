@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payment-config
+data:
+  APP_ENV: Development
+  OTEL_EXPORTER_OTLP_ENDPOINT: otel-collector:4317
+  KAFKA_BROKERS: kafka:29092
+  KAFKA_ORDER_CREATED_TOPIC: order-created
+  KAFKA_PAYMENT_APPROVED_TOPIC: payment-approved
+  KAFKA_PAYMENT_REJECTED_TOPIC: payment-rejected
+  KAFKA_GROUP_ID: payment-service
+  PAYMENT_MAX_AUTO_APPROVAL_AMOUNT: "10000"

@@ -1,0 +1,53 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: microservices-lab
+
+resources:
+  - namespace.yaml
+  - postgres/secret.yaml
+  - postgres/pvc.yaml
+  - postgres/deployment.yaml
+  - postgres/service.yaml
+  - kafka/pvc.yaml
+  - kafka/deployment.yaml
+  - kafka/service.yaml
+  - kafka/init-job.yaml
+  - observability/jaeger/deployment.yaml
+  - observability/jaeger/service.yaml
+  - observability/otel-collector/deployment.yaml
+  - observability/otel-collector/service.yaml
+  - observability/prometheus/deployment.yaml
+  - observability/prometheus/service.yaml
+  - observability/grafana/secret.yaml
+  - observability/grafana/deployment.yaml
+  - observability/grafana/service.yaml
+  - inventory/configmap.yaml
+  - inventory/deployment.yaml
+  - inventory/service.yaml
+  - order/configmap.yaml
+  - order/deployment.yaml
+  - order/service.yaml
+  - payment/configmap.yaml
+  - payment/deployment.yaml
+  - audit/configmap.yaml
+  - audit/deployment.yaml
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+  - name: postgres-initdb
+    files:
+      - init-databases.sql=config/postgres/init-databases.sql
+  - name: otel-collector-config
+    files:
+      - otel-collector-config.yaml=config/observability/otel-collector-config.yaml
+  - name: prometheus-config
+    files:
+      - prometheus.yml=config/observability/prometheus.yml
+  - name: grafana-provisioning
+    files:
+      - prometheus.yml=config/observability/grafana/datasources/prometheus.yml
+      - dashboards.yml=config/observability/grafana/dashboards/dashboards.yml
+      - microserviceslab-dashboard.json=config/observability/grafana/dashboards/microserviceslab-dashboard.json
