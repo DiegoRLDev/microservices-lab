@@ -3,7 +3,7 @@
 O laboratorio esta organizado em duas partes:
 
 - Parte I - Microservices Fundamentals: Fases 0-12.
-- Parte II - Realtime Distributed Systems: Fases 13-22, iniciada somente por instrucao explicita depois do fechamento da Parte I.
+- Parte II - Realtime Distributed Systems: Fases 13-22, iniciada na FASE 13 depois do fechamento da Parte I.
 
 ## Parte I - Microservices Fundamentals
 
@@ -28,7 +28,7 @@ O laboratorio esta organizado em duas partes:
 
 | Fase | Descricao | Status |
 | ---- | --------- | ------ |
-| 13 | PriceFeed.Service Go | Pendente |
+| 13 | PriceFeed.Service Go | Concluido |
 | 14 | Realtime Delivery - SSE vs WebSocket | Pendente |
 | 15 | Kafka PriceUpdated stream | Pendente |
 | 16 | Pricing.Service .NET | Pendente |
@@ -41,7 +41,7 @@ O laboratorio esta organizado em duas partes:
 
 ## Regra de execucao
 
-A Parte I esta concluida. A Parte II esta oficialmente registrada no roadmap, mas nao deve ser implementada sem instrucao explicita para a FASE 13.
+A Parte I esta concluida. A Parte II foi iniciada pela FASE 13 e continua sendo executada uma fase por vez, somente por instrucao explicita.
 
 ## FASE 0 - Estrutura
 
@@ -166,6 +166,14 @@ Validacao:
 dotnet build .\MicroservicesLab.sln
 dotnet test .\MicroservicesLab.sln --no-build
 ```
+
+Resultado da validacao:
+
+- `go test ./...` em `PriceFeed.Service`: aprovado;
+- `go test -race ./...` em `PriceFeed.Service`: tentado, mas o toolchain local exigiu `CGO_ENABLED=1` e depois falhou ao carregar `runtime/race`;
+- `go test ./...` em `Payment.Service`: aprovado;
+- `dotnet build .\MicroservicesLab.sln`: aprovado;
+- `dotnet test .\MicroservicesLab.sln --no-build`: aprovado, 16/16 testes.
 
 Fluxo testavel:
 
@@ -824,3 +832,40 @@ Correcao feita durante a validacao:
 
 - alinhadas referencias de pacotes dos testes para `9.*`, removendo conflito entre `Microsoft.EntityFrameworkCore.Relational` 9.0.19 e 9.0.20;
 - nenhum servico, manifesto, topico ou contrato de runtime foi alterado.
+
+## FASE 13 - PriceFeed.Service Go
+
+Status: Concluido
+
+Criado:
+
+- `PriceFeed.Service` em Go em `src/services/PriceFeed.Service`;
+- `MockPriceProvider` com estado por simbolo, precos iniciais, pequenas oscilacoes e intervalo configuravel;
+- `PriceFeed` desacoplado de provider concreto e de destino concreto;
+- `ConsolePublisher` para observar o fluxo localmente sem Kafka;
+- configuracao por variaveis de ambiente para provider, simbolos, precos iniciais, intervalo e variacao maxima;
+- Dockerfile do servico, sem integracao ao Docker Compose nesta fase;
+- testes unitarios para provider, feed, publisher, configuracao e representacao de preco.
+
+Decisoes didaticas:
+
+- a fonte inicial de precos e simulada, mas fica atras da abstracao `PriceProvider`;
+- Kafka, SSE, WebSocket, `Pricing.Service`, backpressure e load testing permanecem para fases futuras;
+- os precos sao representados em centavos (`int64`), evitando arredondamento basico de `float64` sem adicionar biblioteca decimal externa;
+- o fluxo usa goroutines por simbolo, channel unico de saida e cancelamento por `context.Context`.
+
+Validacao:
+
+```powershell
+cd .\src\services\PriceFeed.Service
+go test ./...
+go test -race ./...
+go run .
+$env:PRICE_UPDATE_INTERVAL = "100ms"
+go run .
+cd ..\Payment.Service
+go test ./...
+cd ..\..\..
+dotnet build .\MicroservicesLab.sln
+dotnet test .\MicroservicesLab.sln --no-build
+```

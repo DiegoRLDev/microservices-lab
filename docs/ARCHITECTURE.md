@@ -5,7 +5,7 @@ Este documento registra as principais decisoes arquiteturais do laboratorio.
 O laboratorio agora esta organizado em duas partes:
 
 - Parte I - Microservices Fundamentals: Fases 0-12.
-- Parte II - Realtime Distributed Systems: Fases 13-22, somente depois da conclusao da Parte I.
+- Parte II - Realtime Distributed Systems: Fases 13-22, iniciada depois da conclusao da Parte I.
 
 ## Servicos
 
@@ -51,17 +51,17 @@ Na FASE 7, `Audit.Worker` consome `order-created`, `payment-approved` e `payment
 
 ### PriceFeed.Service
 
-Servico planejado para a Parte II, nao implementado na Parte I.
+Servico Go implementado na FASE 13 para iniciar a Parte II.
 
-Sera escrito em Go para estudar fluxo continuo de precos, goroutines, channels, streaming, conexoes longas, alto volume de mensagens, baixo overhead, backpressure e integracao com Kafka. A escolha de Go aqui e intencional: esse workload tem caracteristicas diferentes dos servicos de negocio da Parte I.
+Foi escrito em Go para estudar fluxo continuo de precos, goroutines, channels, cancelamento com `context.Context`, streaming, conexoes longas, alto volume de mensagens, baixo overhead e futuras discussoes de backpressure. A escolha de Go aqui e intencional: esse workload tem caracteristicas diferentes dos servicos de negocio da Parte I.
 
-O servico fornecera ou ingerira atualizacoes de precos, com origem desacoplada por uma abstracao conceitual `PriceProvider`. A implementacao inicial sera um `MockPriceProvider`, mas o nucleo do servico nao deve depender de uma fonte simulada especifica.
+O servico fornece atualizacoes continuas de precos, com origem desacoplada por `PriceProvider`. A implementacao inicial e `MockPriceProvider`, mas o nucleo do servico depende apenas da interface, permitindo substituir a fonte por API externa, WebSocket externo ou market data provider em fase futura.
 
 Responsabilidades conceituais:
 
 - `PriceProvider`: de onde vem os precos;
 - `PriceFeed`: como o servico trabalha com o fluxo continuo;
-- `Publisher`: para onde os precos sao enviados, como entrega realtime ou Kafka.
+- `Publisher`: para onde os precos sao enviados. Na FASE 13, `ConsolePublisher`; Kafka e entrega realtime ficam para fases futuras.
 
 ### Pricing.Service
 
@@ -79,7 +79,7 @@ Cada servico controla suas proprias tabelas ou banco:
 | Inventory.Service | `Product` |
 | Payment.Service | sem persistencia propria na FASE 8 |
 | Audit.Worker | `AuditEvent` em `audit_db` |
-| PriceFeed.Service | eventos de preco em memoria/stream, planejado para a Parte II |
+| PriceFeed.Service | eventos de preco em memoria/stream, sem persistencia propria na FASE 13 |
 | Pricing.Service | ultimo preco conhecido por simbolo, planejado para a Parte II |
 
 Nenhum servico acessara tabelas de outro servico. Essa regra evita acoplamento por banco, que costuma parecer simples no inicio e caro quando a arquitetura precisa evoluir.
@@ -110,7 +110,7 @@ Na FASE 8, o ambiente completo roda via `docker compose up -d --build`. Dentro d
 
 O Compose principal cria topicos Kafka por meio do servico `kafka-init` e usa volumes nomeados `postgres_data` e `kafka_data`. As migrations EF Core de `Order.Service`, `Inventory.Service` e `Audit.Worker` sao aplicadas na inicializacao quando `Database__ApplyMigrations=true` esta configurado.
 
-Na Parte II, Kafka tambem sera usado para demonstrar interoperabilidade entre Go e .NET com o topico `price-updated`. O produtor Go nao dependera de tipos .NET, e o consumidor .NET nao dependera de tipos Go. A integracao acontecera pelo contrato do evento.
+Na Parte II, Kafka tambem sera usado futuramente para demonstrar interoperabilidade entre Go e .NET com o topico `price-updated`. Na FASE 13, `PriceFeed.Service` publica apenas no console local. Quando Kafka entrar, o produtor Go nao devera depender de tipos .NET, e o consumidor .NET nao devera depender de tipos Go. A integracao acontecera pelo contrato do evento.
 
 Na FASE 15, `symbol` sera a key candidata do Kafka para estudar ordenacao por ativo dentro de uma partition. Essa escolha tambem devera ser observada do ponto de vista de distribuicao de carga, porque keys muito concentradas podem limitar paralelismo.
 
@@ -275,9 +275,11 @@ Na expansao realtime, tambem sera estudado o problema de multiplas instancias tr
 
 ### FASE 13 - PriceFeed.Service
 
-Criar um servico Go responsavel por fornecer um fluxo continuo de precos ao sistema, com `PriceProvider` desacoplado da logica principal. A implementacao inicial sera um `MockPriceProvider` com preco inicial, pequenas oscilacoes, multiplos simbolos e intervalo configuravel.
+Implementada. O servico Go fornece um fluxo continuo de precos ao sistema, com `PriceProvider` desacoplado da logica principal. A implementacao inicial e `MockPriceProvider`, com preco inicial, pequenas oscilacoes, multiplos simbolos e intervalo configuravel.
 
-Documentar as goroutines, responsabilidades, channels, ciclo de vida e cancelamento com `context.Context`.
+Cada simbolo simulado roda em uma goroutine produtora. As goroutines enviam `PriceUpdate` para um channel compartilhado, consumido por `PriceFeed`. O channel e fechado pelo provider depois que todos os produtores param. O ciclo de vida e controlado por `context.Context`, inclusive no encerramento por `Ctrl+C`.
+
+Os precos sao representados em centavos (`int64`). A decisao evita problemas basicos de arredondamento de `float64` e evita uma dependencia decimal externa desnecessaria para esta fase didatica.
 
 ### FASE 14 - Realtime Delivery - SSE vs WebSocket
 

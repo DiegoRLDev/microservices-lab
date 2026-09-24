@@ -2,9 +2,9 @@
 
 MicroservicesLab e um laboratorio pratico para estudar arquitetura de microservicos usando .NET, Go, PostgreSQL, Kafka, gRPC, Docker e Kubernetes.
 
-O projeto foi construido em fases. A Parte I cobre os fundamentos de microservicos nas Fases 0-12 e esta concluida. A Parte II, registrada como expansao futura, cobre sistemas distribuidos realtime nas Fases 13-22.
+O projeto foi construido em fases. A Parte I cobre os fundamentos de microservicos nas Fases 0-12 e esta concluida. A Parte II cobre sistemas distribuidos realtime nas Fases 13-22.
 
-A expansao realtime nao foi iniciada. Ela deve comecar somente por instrucao explicita para a FASE 13.
+A expansao realtime foi iniciada na FASE 13 com `PriceFeed.Service` em Go. A FASE 14 permanece pendente e deve ser iniciada somente por instrucao explicita.
 
 ## Arquitetura
 
@@ -29,7 +29,7 @@ flowchart TD
 
 - .NET 9 para `Order.Service`, `Inventory.Service`, `Audit.Worker` e `Shared.Contracts`.
 - Go para `Payment.Service`.
-- Go para a futura expansao `PriceFeed.Service`, onde a linguagem sera usada de forma intencional para concorrencia, streaming e conexoes de longa duracao.
+- Go para `PriceFeed.Service`, onde a linguagem e usada de forma intencional para concorrencia, streaming e cancelamento com `context.Context`.
 - PostgreSQL com bancos independentes por servico.
 - gRPC para a consulta de estoque entre Order e Inventory.
 - Kafka para eventos de dominio e comunicacao assincrona.
@@ -46,6 +46,7 @@ MicroservicesLab/
       Order.Service/
       Inventory.Service/
       Payment.Service/
+      PriceFeed.Service/
     workers/
       Audit.Worker/
     building-blocks/
@@ -175,7 +176,7 @@ Na FASE 7, `Audit.Worker` consome `order-created`, `payment-approved` e `payment
 
 | Fase | Descricao | Status |
 | ---- | --------- | ------ |
-| 13 | PriceFeed.Service Go | Pendente |
+| 13 | PriceFeed.Service Go | Concluido |
 | 14 | Realtime Delivery - SSE vs WebSocket | Pendente |
 | 15 | Kafka PriceUpdated stream | Pendente |
 | 16 | Pricing.Service .NET | Pendente |
@@ -186,11 +187,11 @@ Na FASE 7, `Audit.Worker` consome `order-created`, `payment-approved` e `payment
 | 21 | Realtime observability | Pendente |
 | 22 | Load e chaos testing | Pendente |
 
-## Expansao Futura: Realtime Distributed Systems
+## Parte II: Realtime Distributed Systems
 
-A Parte II expandira o laboratorio com `PriceFeed.Service`, um microservico Go voltado a fluxo continuo de precos, concorrencia, throughput, backpressure, particionamento, consumer lag, escalabilidade e comportamento sob carga/falhas.
+A Parte II expande o laboratorio com `PriceFeed.Service`, um microservico Go voltado a fluxo continuo de precos, concorrencia, throughput, backpressure, particionamento, consumer lag, escalabilidade e comportamento sob carga/falhas.
 
-O primeiro desenho conceitual sera desacoplado da fonte real de precos:
+Na FASE 13, o primeiro desenho conceitual foi implementado desacoplando a fonte de precos do fluxo principal:
 
 ```text
 PriceProvider
@@ -202,14 +203,28 @@ PriceProvider
       v
 PriceFeed.Service
       |
-      +-- Realtime Delivery
-      |
-      +-- Kafka price-updated
+      +-- ConsolePublisher
 ```
 
-O `MockPriceProvider` inicial deve simular pequenas oscilacoes em multiplos simbolos, em vez de gerar valores aleatorios desconectados. O intervalo de geracao sera configuravel para permitir experimentos de throughput e backpressure.
+O `MockPriceProvider` inicial simula pequenas oscilacoes em multiplos simbolos, em vez de gerar valores aleatorios desconectados. O intervalo de geracao e configuravel para permitir experimentos futuros de throughput e backpressure.
 
-Depois, a expansao evoluira para demonstrar interoperabilidade entre Go e .NET via Kafka:
+Executar localmente:
+
+```powershell
+cd .\src\services\PriceFeed.Service
+go run .
+```
+
+Frequencia maior para observacao local:
+
+```powershell
+$env:PRICE_UPDATE_INTERVAL = "100ms"
+go run .
+```
+
+Use `Ctrl+C` para encerrar. O servico cancela o contexto, para os produtores, fecha o channel e encerra normalmente.
+
+Depois, a expansao podera evoluir para demonstrar interoperabilidade entre Go e .NET via Kafka:
 
 ```text
 PriceFeed.Service
@@ -764,8 +779,8 @@ docs/guides/TROUBLESHOOTING.md
 
 A Parte I do MicroservicesLab esta concluida.
 
-A proxima trilha possivel e a Parte II, iniciando pela FASE 13: `PriceFeed.Service` em Go. Ela nao deve ser iniciada automaticamente. Use uma instrucao explicita quando quiser avancar:
+A Parte II foi iniciada com a FASE 13. O proximo passo possivel e a FASE 14: Realtime Delivery - SSE vs WebSocket. Ela nao deve ser iniciada automaticamente. Use uma instrucao explicita quando quiser avancar:
 
 ```text
-Avance para a FASE 13.
+Avance para a FASE 14.
 ```
