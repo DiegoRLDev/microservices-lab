@@ -11,6 +11,7 @@ func TestLoadReturnsDefaults(t *testing.T) {
 	t.Setenv("PRICE_INITIAL_PRICES", "")
 	t.Setenv("PRICE_UPDATE_INTERVAL", "")
 	t.Setenv("PRICE_MAX_STEP_CENTS", "")
+	t.Setenv("PRICE_HTTP_ADDR", "")
 
 	cfg, err := Load()
 	if err != nil {
@@ -32,6 +33,10 @@ func TestLoadReturnsDefaults(t *testing.T) {
 	if cfg.PriceFeed.InitialPrices["PETR4"] != 3810 {
 		t.Fatalf("PETR4 initial price = %d, want 3810", cfg.PriceFeed.InitialPrices["PETR4"])
 	}
+
+	if cfg.HTTP.Addr != ":8080" {
+		t.Fatalf("HTTP Addr = %q, want :8080", cfg.HTTP.Addr)
+	}
 }
 
 func TestLoadReadsEnvironment(t *testing.T) {
@@ -40,6 +45,7 @@ func TestLoadReadsEnvironment(t *testing.T) {
 	t.Setenv("PRICE_INITIAL_PRICES", "ABC=10.50,XYZ=20.75")
 	t.Setenv("PRICE_UPDATE_INTERVAL", "100ms")
 	t.Setenv("PRICE_MAX_STEP_CENTS", "7")
+	t.Setenv("PRICE_HTTP_ADDR", ":9090")
 
 	cfg, err := Load()
 	if err != nil {
@@ -60,6 +66,10 @@ func TestLoadReadsEnvironment(t *testing.T) {
 
 	if cfg.PriceFeed.MaxStepCents != 7 {
 		t.Fatalf("MaxStepCents = %d, want 7", cfg.PriceFeed.MaxStepCents)
+	}
+
+	if cfg.HTTP.Addr != ":9090" {
+		t.Fatalf("HTTP Addr = %q, want :9090", cfg.HTTP.Addr)
 	}
 }
 

@@ -53,7 +53,7 @@ Na FASE 7, `Audit.Worker` consome `order-created`, `payment-approved` e `payment
 
 Servico Go implementado na FASE 13 para iniciar a Parte II.
 
-Foi escrito em Go para estudar fluxo continuo de precos, goroutines, channels, cancelamento com `context.Context`, streaming, conexoes longas, alto volume de mensagens, baixo overhead e futuras discussoes de backpressure. A escolha de Go aqui e intencional: esse workload tem caracteristicas diferentes dos servicos de negocio da Parte I.
+Foi escrito em Go para estudar fluxo continuo de precos, goroutines, channels, cancelamento com `context.Context`, streaming, conexoes longas, alto volume de mensagens, baixo overhead e futuras discussoes de backpressure. Na FASE 14, o servico passou a entregar o fluxo para clientes externos via SSE. A escolha de Go aqui e intencional: esse workload tem caracteristicas diferentes dos servicos de negocio da Parte I.
 
 O servico fornece atualizacoes continuas de precos, com origem desacoplada por `PriceProvider`. A implementacao inicial e `MockPriceProvider`, mas o nucleo do servico depende apenas da interface, permitindo substituir a fonte por API externa, WebSocket externo ou market data provider em fase futura.
 
@@ -61,7 +61,7 @@ Responsabilidades conceituais:
 
 - `PriceProvider`: de onde vem os precos;
 - `PriceFeed`: como o servico trabalha com o fluxo continuo;
-- `Publisher`: para onde os precos sao enviados. Na FASE 13, `ConsolePublisher`; Kafka e entrega realtime ficam para fases futuras.
+- `Publisher`: para onde os precos sao enviados. Na FASE 14, `ConsolePublisher` e `Broadcaster` recebem o mesmo fluxo por um `MultiPublisher`; Kafka fica para fase futura.
 
 ### Pricing.Service
 
@@ -79,7 +79,7 @@ Cada servico controla suas proprias tabelas ou banco:
 | Inventory.Service | `Product` |
 | Payment.Service | sem persistencia propria na FASE 8 |
 | Audit.Worker | `AuditEvent` em `audit_db` |
-| PriceFeed.Service | eventos de preco em memoria/stream, sem persistencia propria na FASE 13 |
+| PriceFeed.Service | eventos de preco em memoria/stream, sem persistencia propria |
 | Pricing.Service | ultimo preco conhecido por simbolo, planejado para a Parte II |
 
 Nenhum servico acessara tabelas de outro servico. Essa regra evita acoplamento por banco, que costuma parecer simples no inicio e caro quando a arquitetura precisa evoluir.
@@ -110,7 +110,7 @@ Na FASE 8, o ambiente completo roda via `docker compose up -d --build`. Dentro d
 
 O Compose principal cria topicos Kafka por meio do servico `kafka-init` e usa volumes nomeados `postgres_data` e `kafka_data`. As migrations EF Core de `Order.Service`, `Inventory.Service` e `Audit.Worker` sao aplicadas na inicializacao quando `Database__ApplyMigrations=true` esta configurado.
 
-Na Parte II, Kafka tambem sera usado futuramente para demonstrar interoperabilidade entre Go e .NET com o topico `price-updated`. Na FASE 13, `PriceFeed.Service` publica apenas no console local. Quando Kafka entrar, o produtor Go nao devera depender de tipos .NET, e o consumidor .NET nao devera depender de tipos Go. A integracao acontecera pelo contrato do evento.
+Na Parte II, Kafka tambem sera usado futuramente para demonstrar interoperabilidade entre Go e .NET com o topico `price-updated`. Na FASE 14, `PriceFeed.Service` publica no console local e entrega o fluxo via SSE em `GET /prices/stream`. Quando Kafka entrar, o produtor Go nao devera depender de tipos .NET, e o consumidor .NET nao devera depender de tipos Go. A integracao acontecera pelo contrato do evento.
 
 Na FASE 15, `symbol` sera a key candidata do Kafka para estudar ordenacao por ativo dentro de uma partition. Essa escolha tambem devera ser observada do ponto de vista de distribuicao de carga, porque keys muito concentradas podem limitar paralelismo.
 
@@ -283,7 +283,18 @@ Os precos sao representados em centavos (`int64`). A decisao evita problemas bas
 
 ### FASE 14 - Realtime Delivery - SSE vs WebSocket
 
-Estudar SSE e WebSocket para entrega realtime. Como o fluxo inicial e principalmente backend -> cliente, SSE pode ser suficiente, mas a fase deve escolher conscientemente a abordagem antes de implementar somente o necessario.
+Implementada com SSE. A escolha foi feita porque o fluxo atual e principalmente backend -> cliente, sem requisito de comunicacao bidirecional continua. WebSocket poderia atender tecnicamente, mas adicionaria complexidade que ainda nao e necessaria.
+
+O endpoint `GET /prices/stream` responde com `Content-Type: text/event-stream` e envia eventos `price-update` com JSON no campo `data`:
+
+```text
+event: price-update
+data: {"symbol":"PETR4","price":3810,"occurredAt":"2026-09-28T14:30:01Z"}
+```
+
+O `Broadcaster` mantem subscribers independentes para que varios clientes recebam o mesmo fluxo sem competir pelo channel do provider. Cada subscriber tem um channel bufferizado. Se um cliente ficar lento e o buffer encher, novas atualizacoes para aquele subscriber sao descartadas; isso evita que um unico cliente bloqueie todos os demais. A FASE 17 aprofundara backpressure.
+
+O ciclo de vida do subscriber e ligado ao request context: quando o cliente desconecta, o contexto da requisicao e cancelado, o subscriber e removido e o channel e fechado.
 
 ### FASE 15 - Kafka PriceUpdated
 

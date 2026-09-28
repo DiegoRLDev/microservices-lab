@@ -29,7 +29,7 @@ O laboratorio esta organizado em duas partes:
 | Fase | Descricao | Status |
 | ---- | --------- | ------ |
 | 13 | PriceFeed.Service Go | Concluido |
-| 14 | Realtime Delivery - SSE vs WebSocket | Pendente |
+| 14 | Realtime Delivery - SSE vs WebSocket | Concluido |
 | 15 | Kafka PriceUpdated stream | Pendente |
 | 16 | Pricing.Service .NET | Pendente |
 | 17 | Concorrencia e backpressure | Pendente |
@@ -166,14 +166,6 @@ Validacao:
 dotnet build .\MicroservicesLab.sln
 dotnet test .\MicroservicesLab.sln --no-build
 ```
-
-Resultado da validacao:
-
-- `go test ./...` em `PriceFeed.Service`: aprovado;
-- `go test -race ./...` em `PriceFeed.Service`: tentado, mas o toolchain local exigiu `CGO_ENABLED=1` e depois falhou ao carregar `runtime/race`;
-- `go test ./...` em `Payment.Service`: aprovado;
-- `dotnet build .\MicroservicesLab.sln`: aprovado;
-- `dotnet test .\MicroservicesLab.sln --no-build`: aprovado, 16/16 testes.
 
 Fluxo testavel:
 
@@ -869,3 +861,62 @@ cd ..\..\..
 dotnet build .\MicroservicesLab.sln
 dotnet test .\MicroservicesLab.sln --no-build
 ```
+
+Resultado da validacao:
+
+- `go test ./...` em `PriceFeed.Service`: aprovado;
+- `go test -race ./...` em `PriceFeed.Service`: tentado, mas o toolchain local exigiu `CGO_ENABLED=1` e depois falhou ao carregar `runtime/race`;
+- `go test ./...` em `Payment.Service`: aprovado;
+- `dotnet build .\MicroservicesLab.sln`: aprovado;
+- `dotnet test .\MicroservicesLab.sln --no-build`: aprovado, 16/16 testes.
+
+## FASE 14 - Realtime Delivery - SSE vs WebSocket
+
+Status: Concluido
+
+Criado:
+
+- servidor HTTP no `PriceFeed.Service`;
+- endpoint `GET /health`;
+- endpoint SSE `GET /prices/stream`;
+- `Broadcaster` para distribuir cada `PriceUpdate` para multiplos subscribers;
+- adaptador HTTP/SSE separado do nucleo do `PriceFeed`;
+- testes para SSE, headers, broadcasting, desconexao, health e politica de subscriber lento.
+
+Decisoes didaticas:
+
+- SSE foi escolhido porque o fluxo atual e unidirecional, do servidor para clientes;
+- WebSocket nao foi implementado porque ainda nao ha requisito de comunicacao bidirecional continua;
+- `ConsolePublisher` foi preservado e combinado com o broadcaster por um `MultiPublisher`;
+- clientes lentos possuem channel bufferizado e, quando o buffer fica cheio, perdem novas atualizacoes em vez de bloquear todos os demais clientes;
+- Kafka, gRPC streaming, `Pricing.Service`, backpressure avancado e load testing permanecem para fases futuras.
+
+Validacao:
+
+```powershell
+cd .\src\services\PriceFeed.Service
+go test ./...
+$env:CGO_ENABLED = "1"
+go test -race ./...
+go run .
+curl http://localhost:8080/health
+curl -N http://localhost:8080/prices/stream
+cd ..\Payment.Service
+go test ./...
+cd ..\..\..
+dotnet build .\MicroservicesLab.sln
+dotnet test .\MicroservicesLab.sln --no-build
+```
+
+Resultado da validacao:
+
+- `go test ./...` em `PriceFeed.Service`: aprovado;
+- `go test -race ./...` com `CGO_ENABLED=1`: tentado, mas bloqueado porque `gcc` nao esta disponivel no `PATH`;
+- mini-lab `/health`: aprovado;
+- mini-lab SSE com 1 cliente: aprovado;
+- mini-lab SSE com 2 clientes: aprovado, ambos receberam a mesma sequencia de eventos;
+- desconexao de clientes por encerramento do `curl --max-time`: aprovada, o servico continuou executando;
+- shutdown por `Ctrl+C`: implementado no codigo e coberto por contexto, mas o PTY do ambiente nao propagou o sinal ao processo Go durante o mini-lab;
+- `go test ./...` em `Payment.Service`: aprovado;
+- `dotnet build .\MicroservicesLab.sln`: aprovado;
+- `dotnet test .\MicroservicesLab.sln --no-build`: aprovado, 16/16 testes.

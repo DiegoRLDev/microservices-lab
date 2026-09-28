@@ -16,10 +16,12 @@ const (
 	defaultInitialPrices  = "PETR4=38.10,VALE3=74.21,ITUB4=42.95,WEGE3=39.80,PRIO3=48.35"
 	defaultUpdateInterval = 500 * time.Millisecond
 	defaultMaxStepCents   = 5
+	defaultHTTPAddr       = ":8080"
 )
 
 type Config struct {
 	PriceFeed PriceFeedConfig
+	HTTP      HTTPConfig
 }
 
 type PriceFeedConfig struct {
@@ -30,10 +32,14 @@ type PriceFeedConfig struct {
 	MaxStepCents   int
 }
 
+type HTTPConfig struct {
+	Addr string
+}
+
 func Load() (Config, error) {
 	provider := readString("PRICE_PROVIDER", defaultProvider)
 	if provider != "mock" {
-		return Config{}, fmt.Errorf("PRICE_PROVIDER %q is not supported in phase 13", provider)
+		return Config{}, fmt.Errorf("PRICE_PROVIDER %q is not supported", provider)
 	}
 
 	symbols := readCSV("PRICE_SYMBOLS", defaultSymbols)
@@ -69,6 +75,9 @@ func Load() (Config, error) {
 			InitialPrices:  initialPrices,
 			UpdateInterval: updateInterval,
 			MaxStepCents:   maxStepCents,
+		},
+		HTTP: HTTPConfig{
+			Addr: readString("PRICE_HTTP_ADDR", defaultHTTPAddr),
 		},
 	}, nil
 }

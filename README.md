@@ -4,7 +4,7 @@ MicroservicesLab e um laboratorio pratico para estudar arquitetura de microservi
 
 O projeto foi construido em fases. A Parte I cobre os fundamentos de microservicos nas Fases 0-12 e esta concluida. A Parte II cobre sistemas distribuidos realtime nas Fases 13-22.
 
-A expansao realtime foi iniciada na FASE 13 com `PriceFeed.Service` em Go. A FASE 14 permanece pendente e deve ser iniciada somente por instrucao explicita.
+A expansao realtime foi iniciada na FASE 13 com `PriceFeed.Service` em Go. Na FASE 14, o fluxo passou a ser entregue para clientes externos via SSE. A FASE 15 permanece pendente e deve ser iniciada somente por instrucao explicita.
 
 ## Arquitetura
 
@@ -29,7 +29,7 @@ flowchart TD
 
 - .NET 9 para `Order.Service`, `Inventory.Service`, `Audit.Worker` e `Shared.Contracts`.
 - Go para `Payment.Service`.
-- Go para `PriceFeed.Service`, onde a linguagem e usada de forma intencional para concorrencia, streaming e cancelamento com `context.Context`.
+- Go para `PriceFeed.Service`, onde a linguagem e usada de forma intencional para concorrencia, streaming, SSE e cancelamento com `context.Context`.
 - PostgreSQL com bancos independentes por servico.
 - gRPC para a consulta de estoque entre Order e Inventory.
 - Kafka para eventos de dominio e comunicacao assincrona.
@@ -177,7 +177,7 @@ Na FASE 7, `Audit.Worker` consome `order-created`, `payment-approved` e `payment
 | Fase | Descricao | Status |
 | ---- | --------- | ------ |
 | 13 | PriceFeed.Service Go | Concluido |
-| 14 | Realtime Delivery - SSE vs WebSocket | Pendente |
+| 14 | Realtime Delivery - SSE vs WebSocket | Concluido |
 | 15 | Kafka PriceUpdated stream | Pendente |
 | 16 | Pricing.Service .NET | Pendente |
 | 17 | Concorrencia e backpressure | Pendente |
@@ -204,6 +204,14 @@ PriceProvider
 PriceFeed.Service
       |
       +-- ConsolePublisher
+      |
+      +-- Broadcaster
+              |
+              v
+        GET /prices/stream
+              |
+              v
+             SSE
 ```
 
 O `MockPriceProvider` inicial simula pequenas oscilacoes em multiplos simbolos, em vez de gerar valores aleatorios desconectados. O intervalo de geracao e configuravel para permitir experimentos futuros de throughput e backpressure.
@@ -223,6 +231,24 @@ go run .
 ```
 
 Use `Ctrl+C` para encerrar. O servico cancela o contexto, para os produtores, fecha o channel e encerra normalmente.
+
+Na FASE 14, SSE foi escolhido para a entrega realtime porque o fluxo atual e unidirecional, do servidor para os clientes. WebSocket continua fora do escopo porque ainda nao existe requisito de comunicacao bidirecional continua.
+
+Endpoints locais:
+
+```text
+GET /health
+GET /prices/stream
+```
+
+Exemplo:
+
+```powershell
+curl http://localhost:8080/health
+curl -N http://localhost:8080/prices/stream
+```
+
+Cada evento SSE usa `event: price-update` e envia `data` em JSON com `symbol`, `price` em centavos e `occurredAt`.
 
 Depois, a expansao podera evoluir para demonstrar interoperabilidade entre Go e .NET via Kafka:
 
@@ -779,8 +805,8 @@ docs/guides/TROUBLESHOOTING.md
 
 A Parte I do MicroservicesLab esta concluida.
 
-A Parte II foi iniciada com a FASE 13. O proximo passo possivel e a FASE 14: Realtime Delivery - SSE vs WebSocket. Ela nao deve ser iniciada automaticamente. Use uma instrucao explicita quando quiser avancar:
+A Parte II foi iniciada com a FASE 13 e ja possui entrega realtime via SSE na FASE 14. O proximo passo possivel e a FASE 15: Kafka PriceUpdated stream. Ela nao deve ser iniciada automaticamente. Use uma instrucao explicita quando quiser avancar:
 
 ```text
-Avance para a FASE 14.
+Avance para a FASE 15.
 ```

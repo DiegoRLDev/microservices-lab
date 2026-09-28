@@ -28,7 +28,7 @@ A Parte I esta concluida. A Parte II foi iniciada pela FASE 13 e segue sendo exe
 | Fase | Descricao | Status |
 | ---- | --------- | ------ |
 | 13 | PriceFeed.Service Go | Concluido |
-| 14 | Realtime Delivery - SSE vs WebSocket | Pendente |
+| 14 | Realtime Delivery - SSE vs WebSocket | Concluido |
 | 15 | Kafka PriceUpdated stream | Pendente |
 | 16 | Pricing.Service .NET | Pendente |
 | 17 | Concorrencia e backpressure | Pendente |
@@ -109,8 +109,14 @@ PriceProvider
           |
           +-------> ConsolePublisher
           |
-          +-------> Kafka / Realtime Delivery
-                   fases futuras
+          +-------> Broadcaster
+                   |
+                   v
+            Realtime Delivery
+                   SSE
+          |
+          +-------> Kafka
+                   fase futura
 ```
 
 ## Evolucao Planejada
@@ -219,7 +225,7 @@ Essa decisao devera ser validada na implementacao, porque uma key tambem influen
 | Fase | Nome | Objetivo principal | Conceitos estudados | Status |
 | ---- | ---- | ------------------ | ------------------- | ------ |
 | 13 | PriceFeed.Service Go | Criar um servico Go responsavel por fornecer um fluxo continuo de precos, iniciando com fonte simulada dinamica e desacoplada. | goroutines, channels, `context.Context`, fluxo continuo, configuracao, `PriceProvider`, `Publisher` | Concluido |
-| 14 | Realtime Delivery - SSE vs WebSocket | Estudar requisitos de entrega backend -> cliente e escolher conscientemente entre SSE e WebSocket antes de implementar o necessario. | SSE, WebSocket, fluxo unidirecional, conexoes longas, clientes realtime | Pendente |
+| 14 | Realtime Delivery - SSE vs WebSocket | Estudar requisitos de entrega backend -> cliente e escolher conscientemente SSE para o fluxo atual, sem implementar WebSocket. | SSE, fluxo unidirecional, conexoes longas, clientes realtime, broadcasting | Concluido |
 | 15 | Kafka PriceUpdated stream | Distribuir o fluxo de precos por Kafka usando eventos `PriceUpdated`. | throughput, partitions, ordering por key, `symbol` como key candidata, stream de eventos | Pendente |
 | 16 | Pricing.Service .NET | Consumir `price-updated` em .NET e manter ultimo preco conhecido por simbolo. | interoperabilidade Go -> Kafka -> .NET, contratos independentes de linguagem, estado derivado simples | Pendente |
 | 17 | Concorrencia e backpressure | Criar situacoes em que o producer e mais rapido que o consumer e observar limites do pipeline. | goroutines, buffered/unbuffered channels, worker pool, fan-out/fan-in, buffer cheio, consumer lag | Pendente |
