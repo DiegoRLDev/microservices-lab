@@ -2,7 +2,7 @@
 
 `PriceFeed.Service` e o servico Go introduzido na FASE 13 da Parte II - Realtime Distributed Systems.
 
-Ele produz um fluxo continuo de atualizacoes de precos usando uma fonte simulada (`MockPriceProvider`), publica localmente no console e entrega o mesmo fluxo para clientes externos via SSE. Kafka, WebSocket, gRPC streaming, consumidores .NET, Kubernetes e testes de carga ficam para fases futuras.
+Ele produz um fluxo continuo de atualizacoes de precos usando uma fonte simulada (`MockPriceProvider`), publica localmente no console, entrega o mesmo fluxo para clientes externos via SSE e expoe um mini-lab didatico de gRPC Server Streaming para o `Pricing.Service`. Kafka, WebSocket, Kubernetes e testes de carga ficam para fases futuras.
 
 ## Responsabilidades
 
@@ -10,6 +10,7 @@ Ele produz um fluxo continuo de atualizacoes de precos usando uma fonte simulada
 - `PriceFeed`: consome o fluxo do provider e encaminha para um publisher.
 - `Publisher`: destino das atualizacoes. Nesta fase, `ConsolePublisher` e `Broadcaster` por meio de `MultiPublisher`.
 - `Broadcaster`: distribui cada atualizacao para subscribers independentes.
+- `grpcdelivery`: adaptador de transporte para gRPC Server Streaming, consumindo o `Broadcaster` sem acoplar o nucleo do feed ao gRPC.
 
 ## MockPriceProvider
 
@@ -60,6 +61,7 @@ PRICE_UPDATE_INTERVAL=500ms
 PRICE_INITIAL_PRICES=PETR4=38.10,VALE3=74.21,ITUB4=42.95,WEGE3=39.80,PRIO3=48.35
 PRICE_MAX_STEP_CENTS=5
 PRICE_HTTP_ADDR=:8080
+PRICE_GRPC_ADDR=:9090
 ```
 
 Todas possuem valores padrao.
@@ -89,6 +91,37 @@ data: {"symbol":"PETR4","price":3810,"occurredAt":"2026-09-28T14:30:01Z"}
 `price` permanece em centavos, preservando a representacao interna da FASE 13.
 
 SSE foi escolhido porque o fluxo atual e unidirecional: servidor para cliente. WebSocket nao foi implementado porque ainda nao existe requisito de comunicacao bidirecional continua.
+
+## gRPC Server Streaming
+
+O mini-lab gRPC expõe o mesmo fluxo continuo para clientes internos:
+
+```text
+PriceFeed.Service -> gRPC Server Streaming -> Pricing.Service
+```
+
+Contrato:
+
+```text
+src/protos/pricefeed.proto
+```
+
+Executar o servidor:
+
+```powershell
+cd .\src\services\PriceFeed.Service
+go run .
+```
+
+Executar o cliente didatico .NET em outro terminal:
+
+```powershell
+cd .\src\services\Pricing.Service
+$env:PRICE_FEED_GRPC_ADDRESS = "http://localhost:9090"
+dotnet run
+```
+
+O cliente abre uma chamada `StreamPrices` e recebe varias mensagens `PriceUpdate` na mesma conexao. Use `Ctrl+C` no cliente para cancelar apenas a assinatura gRPC; o `PriceFeed.Service` continua executando.
 
 ## Broadcasting e Clientes Lentos
 

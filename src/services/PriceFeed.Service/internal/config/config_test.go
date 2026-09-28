@@ -12,6 +12,7 @@ func TestLoadReturnsDefaults(t *testing.T) {
 	t.Setenv("PRICE_UPDATE_INTERVAL", "")
 	t.Setenv("PRICE_MAX_STEP_CENTS", "")
 	t.Setenv("PRICE_HTTP_ADDR", "")
+	t.Setenv("PRICE_GRPC_ADDR", "")
 
 	cfg, err := Load()
 	if err != nil {
@@ -37,6 +38,10 @@ func TestLoadReturnsDefaults(t *testing.T) {
 	if cfg.HTTP.Addr != ":8080" {
 		t.Fatalf("HTTP Addr = %q, want :8080", cfg.HTTP.Addr)
 	}
+
+	if cfg.GRPC.Addr != ":9090" {
+		t.Fatalf("GRPC Addr = %q, want :9090", cfg.GRPC.Addr)
+	}
 }
 
 func TestLoadReadsEnvironment(t *testing.T) {
@@ -46,6 +51,7 @@ func TestLoadReadsEnvironment(t *testing.T) {
 	t.Setenv("PRICE_UPDATE_INTERVAL", "100ms")
 	t.Setenv("PRICE_MAX_STEP_CENTS", "7")
 	t.Setenv("PRICE_HTTP_ADDR", ":9090")
+	t.Setenv("PRICE_GRPC_ADDR", ":9191")
 
 	cfg, err := Load()
 	if err != nil {
@@ -70,6 +76,10 @@ func TestLoadReadsEnvironment(t *testing.T) {
 
 	if cfg.HTTP.Addr != ":9090" {
 		t.Fatalf("HTTP Addr = %q, want :9090", cfg.HTTP.Addr)
+	}
+
+	if cfg.GRPC.Addr != ":9191" {
+		t.Fatalf("GRPC Addr = %q, want :9191", cfg.GRPC.Addr)
 	}
 }
 

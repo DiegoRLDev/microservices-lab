@@ -4,7 +4,7 @@ MicroservicesLab e um laboratorio pratico para estudar arquitetura de microservi
 
 O projeto foi construido em fases. A Parte I cobre os fundamentos de microservicos nas Fases 0-12 e esta concluida. A Parte II cobre sistemas distribuidos realtime nas Fases 13-22.
 
-A expansao realtime foi iniciada na FASE 13 com `PriceFeed.Service` em Go. Na FASE 14, o fluxo passou a ser entregue para clientes externos via SSE. A FASE 15 permanece pendente e deve ser iniciada somente por instrucao explicita.
+A expansao realtime foi iniciada na FASE 13 com `PriceFeed.Service` em Go. Na FASE 14, o fluxo passou a ser entregue para clientes externos via SSE. Depois dela, um mini-lab didatico adicionou gRPC Server Streaming direto entre `PriceFeed.Service` e `Pricing.Service`. A FASE 15 permanece pendente e deve ser iniciada somente por instrucao explicita.
 
 ## Arquitetura
 
@@ -29,7 +29,7 @@ flowchart TD
 
 - .NET 9 para `Order.Service`, `Inventory.Service`, `Audit.Worker` e `Shared.Contracts`.
 - Go para `Payment.Service`.
-- Go para `PriceFeed.Service`, onde a linguagem e usada de forma intencional para concorrencia, streaming, SSE e cancelamento com `context.Context`.
+- Go para `PriceFeed.Service`, onde a linguagem e usada de forma intencional para concorrencia, streaming, SSE, gRPC Server Streaming e cancelamento com `context.Context`.
 - PostgreSQL com bancos independentes por servico.
 - gRPC para a consulta de estoque entre Order e Inventory.
 - Kafka para eventos de dominio e comunicacao assincrona.
@@ -47,6 +47,7 @@ MicroservicesLab/
       Inventory.Service/
       Payment.Service/
       PriceFeed.Service/
+      Pricing.Service/
     workers/
       Audit.Worker/
     building-blocks/
@@ -207,11 +208,16 @@ PriceFeed.Service
       |
       +-- Broadcaster
               |
-              v
-        GET /prices/stream
+              +-- GET /prices/stream
+              |       |
+              |       v
+              |      SSE
               |
-              v
-             SSE
+              +-- gRPC StreamPrices
+                      |
+                      v
+                 Pricing.Service
+                    .NET
 ```
 
 O `MockPriceProvider` inicial simula pequenas oscilacoes em multiplos simbolos, em vez de gerar valores aleatorios desconectados. O intervalo de geracao e configuravel para permitir experimentos futuros de throughput e backpressure.
@@ -250,6 +256,28 @@ curl -N http://localhost:8080/prices/stream
 
 Cada evento SSE usa `event: price-update` e envia `data` em JSON com `symbol`, `price` em centavos e `occurredAt`.
 
+Depois da FASE 14, foi adicionado um mini-lab curto de gRPC Server Streaming. Ele reaproveita o `Broadcaster` do `PriceFeed.Service` e entrega o mesmo fluxo para um cliente .NET didatico em `Pricing.Service`, sem Kafka e sem persistencia:
+
+```text
+PriceFeed.Service
+        Go
+         |
+         | gRPC Server Streaming
+         v
+   Pricing.Service
+        .NET
+```
+
+Executar o cliente gRPC:
+
+```powershell
+cd .\src\services\Pricing.Service
+$env:PRICE_FEED_GRPC_ADDRESS = "http://localhost:9090"
+dotnet run
+```
+
+Lab: [Mini-lab Realtime gRPC](docs/labs/LAB-RT-GRPC-SERVER-STREAMING.md)
+
 Depois, a expansao podera evoluir para demonstrar interoperabilidade entre Go e .NET via Kafka:
 
 ```text
@@ -264,8 +292,6 @@ PriceFeed.Service
    Pricing.Service
         .NET
 ```
-
-Na FASE 14, a escolha entre SSE e WebSocket devera ser feita com base nos requisitos reais de entrega. Como o fluxo inicial e principalmente backend -> cliente, SSE pode ser suficiente, mas a decisao final fica para a propria fase.
 
 Na FASE 15, `symbol` sera a key candidata do Kafka para estudar ordenacao por ativo dentro de partitions. Nas Fases 18 e 19, Kubernetes podera ser usado para subir replicas, mas o conceito principal sera a relacao entre consumer groups, partitions, ownership, rebalance e ordering.
 

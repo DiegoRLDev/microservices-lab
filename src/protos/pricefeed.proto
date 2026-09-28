@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+option csharp_namespace = "MicroservicesLab.Protos.PriceFeed";
+option go_package = "microserviceslab/pricefeed-service/internal/grpcdelivery/pricefeedpb";
+
+package pricefeed.v1;
+
+service PriceFeed {
+  rpc StreamPrices (StreamPricesRequest) returns (stream PriceUpdate);
+}
+
+message StreamPricesRequest {
+}
+
+message PriceUpdate {
+  string symbol = 1;
+  int64 price = 2;
+  google.protobuf.Timestamp occurred_at = 3;
+}

@@ -21,6 +21,7 @@ Kubernetes:     kubectl apply -k k8s
 | [LAB 06](LAB-06-kubernetes-self-healing.md) | Kubernetes Self-Healing |
 | [LAB 07](LAB-07-kubernetes-scaling.md) | Kubernetes Scaling |
 | [LAB 08](LAB-08-troubleshooting-kubernetes-kafka.md) | Troubleshooting Kubernetes/Kafka |
+| [Mini-lab Realtime gRPC](LAB-RT-GRPC-SERVER-STREAMING.md) | gRPC Server Streaming entre PriceFeed.Service e Pricing.Service |
 
 ## Guias de Apoio
 

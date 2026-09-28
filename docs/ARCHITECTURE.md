@@ -53,7 +53,7 @@ Na FASE 7, `Audit.Worker` consome `order-created`, `payment-approved` e `payment
 
 Servico Go implementado na FASE 13 para iniciar a Parte II.
 
-Foi escrito em Go para estudar fluxo continuo de precos, goroutines, channels, cancelamento com `context.Context`, streaming, conexoes longas, alto volume de mensagens, baixo overhead e futuras discussoes de backpressure. Na FASE 14, o servico passou a entregar o fluxo para clientes externos via SSE. A escolha de Go aqui e intencional: esse workload tem caracteristicas diferentes dos servicos de negocio da Parte I.
+Foi escrito em Go para estudar fluxo continuo de precos, goroutines, channels, cancelamento com `context.Context`, streaming, conexoes longas, alto volume de mensagens, baixo overhead e futuras discussoes de backpressure. Na FASE 14, o servico passou a entregar o fluxo para clientes externos via SSE. Depois dela, um mini-lab adicionou gRPC Server Streaming para comparar streaming direto tipado com SSE antes da entrada de Kafka. A escolha de Go aqui e intencional: esse workload tem caracteristicas diferentes dos servicos de negocio da Parte I.
 
 O servico fornece atualizacoes continuas de precos, com origem desacoplada por `PriceProvider`. A implementacao inicial e `MockPriceProvider`, mas o nucleo do servico depende apenas da interface, permitindo substituir a fonte por API externa, WebSocket externo ou market data provider em fase futura.
 
@@ -61,13 +61,13 @@ Responsabilidades conceituais:
 
 - `PriceProvider`: de onde vem os precos;
 - `PriceFeed`: como o servico trabalha com o fluxo continuo;
-- `Publisher`: para onde os precos sao enviados. Na FASE 14, `ConsolePublisher` e `Broadcaster` recebem o mesmo fluxo por um `MultiPublisher`; Kafka fica para fase futura.
+- `Publisher`: para onde os precos sao enviados. Na FASE 14, `ConsolePublisher` e `Broadcaster` recebem o mesmo fluxo por um `MultiPublisher`; no mini-lab gRPC, o server streaming assina o `Broadcaster`; Kafka fica para fase futura.
 
 ### Pricing.Service
 
-Servico planejado para a Parte II, nao implementado na Parte I.
+Servico .NET iniciado como cliente didatico no mini-lab de gRPC Server Streaming.
 
-Sera escrito em .NET e consumira eventos `PriceUpdated` publicados pelo `PriceFeed.Service`. O objetivo principal sera demonstrar interoperabilidade entre Go e .NET atraves de contratos independentes de linguagem e Kafka.
+Nesta etapa intermediaria, ele nao possui REST, banco, regras de dominio ou consumo Kafka. Ele abre uma chamada `StreamPrices` contra o `PriceFeed.Service`, consome continuamente `PriceUpdate` via gRPC e imprime o fluxo recebido. Na futura FASE 16, o servico podera evoluir para consumir eventos `PriceUpdated` publicados via Kafka e manter o ultimo preco conhecido por simbolo.
 
 ## Dono dos Dados
 
@@ -80,7 +80,7 @@ Cada servico controla suas proprias tabelas ou banco:
 | Payment.Service | sem persistencia propria na FASE 8 |
 | Audit.Worker | `AuditEvent` em `audit_db` |
 | PriceFeed.Service | eventos de preco em memoria/stream, sem persistencia propria |
-| Pricing.Service | ultimo preco conhecido por simbolo, planejado para a Parte II |
+| Pricing.Service | sem persistencia; cliente gRPC didatico no mini-lab, estado derivado planejado para a FASE 16 |
 
 Nenhum servico acessara tabelas de outro servico. Essa regra evita acoplamento por banco, que costuma parecer simples no inicio e caro quando a arquitetura precisa evoluir.
 
@@ -110,7 +110,7 @@ Na FASE 8, o ambiente completo roda via `docker compose up -d --build`. Dentro d
 
 O Compose principal cria topicos Kafka por meio do servico `kafka-init` e usa volumes nomeados `postgres_data` e `kafka_data`. As migrations EF Core de `Order.Service`, `Inventory.Service` e `Audit.Worker` sao aplicadas na inicializacao quando `Database__ApplyMigrations=true` esta configurado.
 
-Na Parte II, Kafka tambem sera usado futuramente para demonstrar interoperabilidade entre Go e .NET com o topico `price-updated`. Na FASE 14, `PriceFeed.Service` publica no console local e entrega o fluxo via SSE em `GET /prices/stream`. Quando Kafka entrar, o produtor Go nao devera depender de tipos .NET, e o consumidor .NET nao devera depender de tipos Go. A integracao acontecera pelo contrato do evento.
+Na Parte II, Kafka tambem sera usado futuramente para demonstrar interoperabilidade entre Go e .NET com o topico `price-updated`. Na FASE 14, `PriceFeed.Service` publica no console local e entrega o fluxo via SSE em `GET /prices/stream`. No mini-lab intermediario, o mesmo fluxo tambem e exposto por gRPC Server Streaming usando `src/protos/pricefeed.proto`. Quando Kafka entrar, o produtor Go nao devera depender de tipos .NET, e o consumidor .NET nao devera depender de tipos Go. A integracao acontecera pelo contrato do evento.
 
 Na FASE 15, `symbol` sera a key candidata do Kafka para estudar ordenacao por ativo dentro de uma partition. Essa escolha tambem devera ser observada do ponto de vista de distribuicao de carga, porque keys muito concentradas podem limitar paralelismo.
 
@@ -295,6 +295,44 @@ data: {"symbol":"PETR4","price":3810,"occurredAt":"2026-09-28T14:30:01Z"}
 O `Broadcaster` mantem subscribers independentes para que varios clientes recebam o mesmo fluxo sem competir pelo channel do provider. Cada subscriber tem um channel bufferizado. Se um cliente ficar lento e o buffer encher, novas atualizacoes para aquele subscriber sao descartadas; isso evita que um unico cliente bloqueie todos os demais. A FASE 17 aprofundara backpressure.
 
 O ciclo de vida do subscriber e ligado ao request context: quando o cliente desconecta, o contexto da requisicao e cancelado, o subscriber e removido e o channel e fechado.
+
+### Mini-lab - gRPC Server Streaming
+
+Implementado depois da FASE 14 e antes da FASE 15. O objetivo e comparar streaming direto tipado com SSE, sem introduzir broker ainda.
+
+O contrato fica em `src/protos/pricefeed.proto`:
+
+```text
+service PriceFeed {
+  rpc StreamPrices(StreamPricesRequest) returns (stream PriceUpdate);
+}
+```
+
+O adaptador Go `grpcdelivery` assina o `Broadcaster`, converte `PriceUpdate` para o contrato Protobuf e envia mensagens no stream gRPC. O nucleo do `PriceFeed` continua sem conhecer gRPC, SSE, .NET ou Kafka.
+
+O `Pricing.Service` atual e apenas um console .NET de laboratorio. Ele conecta em `PRICE_FEED_GRPC_ADDRESS`, chama `StreamPrices`, imprime as atualizacoes e respeita cancelamento por `Ctrl+C`.
+
+Resumo:
+
+```text
+MockPriceProvider
+      |
+      v
+PriceFeed
+      |
+      v
+MultiPublisher
+      |
+      +--> ConsolePublisher
+      |
+      +--> Broadcaster
+              |
+              +--> SSE clients
+              |
+              +--> gRPC StreamPrices clients
+```
+
+Kafka permanece fora deste mini-lab. A FASE 15 continua responsavel por `PriceUpdated` em broker, partitions, key e delivery semantics.
 
 ### FASE 15 - Kafka PriceUpdated
 

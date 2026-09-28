@@ -17,11 +17,13 @@ const (
 	defaultUpdateInterval = 500 * time.Millisecond
 	defaultMaxStepCents   = 5
 	defaultHTTPAddr       = ":8080"
+	defaultGRPCAddr       = ":9090"
 )
 
 type Config struct {
 	PriceFeed PriceFeedConfig
 	HTTP      HTTPConfig
+	GRPC      GRPCConfig
 }
 
 type PriceFeedConfig struct {
@@ -33,6 +35,10 @@ type PriceFeedConfig struct {
 }
 
 type HTTPConfig struct {
+	Addr string
+}
+
+type GRPCConfig struct {
 	Addr string
 }
 
@@ -78,6 +84,9 @@ func Load() (Config, error) {
 		},
 		HTTP: HTTPConfig{
 			Addr: readString("PRICE_HTTP_ADDR", defaultHTTPAddr),
+		},
+		GRPC: GRPCConfig{
+			Addr: readString("PRICE_GRPC_ADDR", defaultGRPCAddr),
 		},
 	}, nil
 }

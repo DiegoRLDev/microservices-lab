@@ -30,6 +30,7 @@ O laboratorio esta organizado em duas partes:
 | ---- | --------- | ------ |
 | 13 | PriceFeed.Service Go | Concluido |
 | 14 | Realtime Delivery - SSE vs WebSocket | Concluido |
+| Mini-lab | gRPC Server Streaming Go -> .NET | Concluido |
 | 15 | Kafka PriceUpdated stream | Pendente |
 | 16 | Pricing.Service .NET | Pendente |
 | 17 | Concorrencia e backpressure | Pendente |
@@ -917,6 +918,58 @@ Resultado da validacao:
 - mini-lab SSE com 2 clientes: aprovado, ambos receberam a mesma sequencia de eventos;
 - desconexao de clientes por encerramento do `curl --max-time`: aprovada, o servico continuou executando;
 - shutdown por `Ctrl+C`: implementado no codigo e coberto por contexto, mas o PTY do ambiente nao propagou o sinal ao processo Go durante o mini-lab;
+- `go test ./...` em `Payment.Service`: aprovado;
+- `dotnet build .\MicroservicesLab.sln`: aprovado;
+- `dotnet test .\MicroservicesLab.sln --no-build`: aprovado, 16/16 testes.
+
+## Mini-lab Realtime - gRPC Server Streaming
+
+Status: Concluido
+
+Criado:
+
+- contrato `src/protos/pricefeed.proto`;
+- adaptador gRPC Server Streaming no `PriceFeed.Service`;
+- configuracao `PRICE_GRPC_ADDR`, com padrao `:9090`;
+- `Pricing.Service` .NET como cliente console didatico;
+- lab `docs/labs/LAB-RT-GRPC-SERVER-STREAMING.md`;
+- testes para streaming gRPC e cancelamento do subscriber.
+
+Decisoes didaticas:
+
+- o nucleo do `PriceFeed` continua desacoplado de gRPC, SSE, .NET e Kafka;
+- gRPC assina o mesmo `Broadcaster` usado pelo SSE;
+- `Pricing.Service` nao recebeu banco, REST, Clean Architecture, MediatR ou consumo Kafka nesta etapa;
+- Kafka e o evento `PriceUpdated` permanecem para a FASE 15;
+- a FASE 16 continua reservada para evoluir `Pricing.Service` como consumidor Kafka com estado derivado.
+
+Validacao:
+
+```powershell
+cd .\src\services\PriceFeed.Service
+go test ./...
+$env:CGO_ENABLED = "1"
+go test -race ./...
+$env:PRICE_UPDATE_INTERVAL = "100ms"
+$env:PRICE_GRPC_ADDR = ":19090"
+$env:PRICE_HTTP_ADDR = ":18080"
+go run .
+cd ..\Pricing.Service
+$env:PRICE_FEED_GRPC_ADDRESS = "http://localhost:19090"
+dotnet run --no-build
+cd ..\Payment.Service
+go test ./...
+cd ..\..\..
+dotnet build .\MicroservicesLab.sln
+dotnet test .\MicroservicesLab.sln --no-build
+```
+
+Resultado da validacao:
+
+- `go test ./...` em `PriceFeed.Service`: aprovado;
+- `go test -race ./...` com `CGO_ENABLED=1`: tentado, mas bloqueado porque `gcc` nao esta disponivel no `PATH`;
+- smoke test manual gRPC: aprovado, `Pricing.Service` recebeu fluxo real de `PETR4`, `VALE3`, `ITUB4`, `WEGE3` e `PRIO3`;
+- cancelamento do subscriber gRPC: coberto por teste automatizado; no smoke test, o `Ctrl+C` do PTY encerrou o runner local sem servir como evidencia adicional de graceful shutdown;
 - `go test ./...` em `Payment.Service`: aprovado;
 - `dotnet build .\MicroservicesLab.sln`: aprovado;
 - `dotnet test .\MicroservicesLab.sln --no-build`: aprovado, 16/16 testes.

@@ -25,10 +25,13 @@ Este e o roadmap oficial do laboratorio. As fases devem ser executadas uma por v
 
 A Parte I esta concluida. A Parte II foi iniciada pela FASE 13 e segue sendo executada uma fase por vez, somente por instrucao explicita.
 
+Entre a FASE 14 e a FASE 15 existe um mini-lab concluido de gRPC Server Streaming direto entre `PriceFeed.Service` e `Pricing.Service`. Ele e didatico e nao altera o status da FASE 15, que continua pendente.
+
 | Fase | Descricao | Status |
 | ---- | --------- | ------ |
 | 13 | PriceFeed.Service Go | Concluido |
 | 14 | Realtime Delivery - SSE vs WebSocket | Concluido |
+| Mini-lab | gRPC Server Streaming Go -> .NET | Concluido |
 | 15 | Kafka PriceUpdated stream | Pendente |
 | 16 | Pricing.Service .NET | Pendente |
 | 17 | Concorrencia e backpressure | Pendente |
@@ -111,9 +114,11 @@ PriceProvider
           |
           +-------> Broadcaster
                    |
-                   v
-            Realtime Delivery
-                   SSE
+                   +-------> Realtime Delivery
+                   |              SSE
+                   |
+                   +-------> gRPC Server Streaming
+                                  Pricing.Service
           |
           +-------> Kafka
                    fase futura
@@ -226,6 +231,7 @@ Essa decisao devera ser validada na implementacao, porque uma key tambem influen
 | ---- | ---- | ------------------ | ------------------- | ------ |
 | 13 | PriceFeed.Service Go | Criar um servico Go responsavel por fornecer um fluxo continuo de precos, iniciando com fonte simulada dinamica e desacoplada. | goroutines, channels, `context.Context`, fluxo continuo, configuracao, `PriceProvider`, `Publisher` | Concluido |
 | 14 | Realtime Delivery - SSE vs WebSocket | Estudar requisitos de entrega backend -> cliente e escolher conscientemente SSE para o fluxo atual, sem implementar WebSocket. | SSE, fluxo unidirecional, conexoes longas, clientes realtime, broadcasting | Concluido |
+| Mini-lab | gRPC Server Streaming Go -> .NET | Comparar streaming direto tipado com SSE antes de introduzir Kafka. | `.proto`, HTTP/2, server streaming, cancelamento por contexto, interoperabilidade Go -> .NET | Concluido |
 | 15 | Kafka PriceUpdated stream | Distribuir o fluxo de precos por Kafka usando eventos `PriceUpdated`. | throughput, partitions, ordering por key, `symbol` como key candidata, stream de eventos | Pendente |
 | 16 | Pricing.Service .NET | Consumir `price-updated` em .NET e manter ultimo preco conhecido por simbolo. | interoperabilidade Go -> Kafka -> .NET, contratos independentes de linguagem, estado derivado simples | Pendente |
 | 17 | Concorrencia e backpressure | Criar situacoes em que o producer e mais rapido que o consumer e observar limites do pipeline. | goroutines, buffered/unbuffered channels, worker pool, fan-out/fan-in, buffer cheio, consumer lag | Pendente |

@@ -11,7 +11,10 @@ import (
 	"syscall"
 	"time"
 
+	"google.golang.org/grpc"
 	"microserviceslab/pricefeed-service/internal/config"
+	"microserviceslab/pricefeed-service/internal/grpcdelivery"
+	"microserviceslab/pricefeed-service/internal/grpcdelivery/pricefeedpb"
 	"microserviceslab/pricefeed-service/internal/httpdelivery"
 	"microserviceslab/pricefeed-service/internal/pricefeed"
 )
@@ -55,8 +58,10 @@ func main() {
 			return ctx
 		},
 	}
+	grpcServer := grpc.NewServer()
+	pricefeedpb.RegisterPriceFeedServer(grpcServer, grpcdelivery.NewPriceFeedServer(broadcaster))
 
-	errs := make(chan error, 2)
+	errs := make(chan error, 3)
 
 	logger.Info(
 		"starting PriceFeed.Service",
@@ -65,6 +70,7 @@ func main() {
 		slog.Duration("updateInterval", cfg.PriceFeed.UpdateInterval),
 		slog.Int("maxStepCents", cfg.PriceFeed.MaxStepCents),
 		slog.String("httpAddr", cfg.HTTP.Addr),
+		slog.String("grpcAddr", cfg.GRPC.Addr),
 	)
 
 	go func() {
@@ -74,6 +80,20 @@ func main() {
 	go func() {
 		err := httpServer.ListenAndServe()
 		if errors.Is(err, http.ErrServerClosed) {
+			err = nil
+		}
+		errs <- err
+	}()
+
+	go func() {
+		listener, err := net.Listen("tcp", cfg.GRPC.Addr)
+		if err != nil {
+			errs <- err
+			return
+		}
+
+		err = grpcServer.Serve(listener)
+		if errors.Is(err, grpc.ErrServerStopped) {
 			err = nil
 		}
 		errs <- err
@@ -97,6 +117,7 @@ func main() {
 		logger.Error("HTTP server shutdown failed", slog.String("error", err.Error()))
 		exitCode = 1
 	}
+	grpcdelivery.Shutdown(shutdownCtx, grpcServer.Stop, grpcServer.GracefulStop)
 
 	logger.Info("PriceFeed.Service stopped")
 
