@@ -31,7 +31,7 @@ O laboratorio esta organizado em duas partes:
 | 13 | PriceFeed.Service Go | Concluido |
 | 14 | Realtime Delivery - SSE vs WebSocket | Concluido |
 | Mini-lab | gRPC Server Streaming Go -> .NET | Concluido |
-| 15 | Kafka PriceUpdated stream | Pendente |
+| 15 | Kafka PriceUpdated stream | Concluido |
 | 16 | Pricing.Service .NET | Pendente |
 | 17 | Concorrencia e backpressure | Pendente |
 | 18 | Consumer scaling | Pendente |
@@ -63,9 +63,9 @@ dotnet build .\MicroservicesLab.sln
 
 ## Expansao registrada
 
-A expansao futura adicionara `PriceFeed.Service` em Go para estudar fluxo continuo de dados, concorrencia, throughput, backpressure, particionamento, consumer lag, escalabilidade e comportamento sob carga/falhas.
+A Parte II adicionou `PriceFeed.Service` em Go para estudar fluxo continuo de dados, concorrencia, throughput, backpressure, particionamento, consumer lag, escalabilidade e comportamento sob carga/falhas.
 
-Tambem esta planejado `Pricing.Service` em .NET para consumir `PriceUpdated` e demonstrar interoperabilidade Go -> Kafka -> .NET usando contratos independentes de linguagem.
+Tambem esta planejado evoluir `Pricing.Service` em .NET para consumir `PriceUpdated` e demonstrar interoperabilidade Go -> Kafka -> .NET usando contratos independentes de linguagem.
 
 A Parte II sera organizada em quatro blocos conceituais:
 
@@ -74,7 +74,7 @@ A Parte II sera organizada em quatro blocos conceituais:
 - Arquitetura: Fase 20;
 - Operacao: Fases 21-22.
 
-Na FASE 13, a origem dos precos devera ficar desacoplada por uma abstracao conceitual `PriceProvider`, com `MockPriceProvider` como implementacao inicial. Na FASE 15, `symbol` sera a key candidata do Kafka para estudar ordenacao por ativo. Na FASE 18, o foco sera consumer scaling em consumer groups; na FASE 19, o foco sera partitioning, ownership e ordering com multiplas instancias.
+Na FASE 13, a origem dos precos ficou desacoplada por uma abstracao conceitual `PriceProvider`, com `MockPriceProvider` como implementacao inicial. Na FASE 15, `symbol` passou a ser a key Kafka para estudar ordenacao por ativo. Na FASE 18, o foco sera consumer scaling em consumer groups; na FASE 19, o foco sera partitioning, ownership e ordering com multiplas instancias.
 
 ## FASE 1 - Order.Service
 
@@ -783,7 +783,7 @@ Decisoes didaticas:
 - a FASE 12 nao adicionou novos servicos nem alterou a arquitetura;
 - Docker Compose e Kubernetes foram preservados como modos validos de execucao;
 - os labs usam comandos PowerShell/Windows e caminhos reais do repositorio;
-- `price-updated` permanece somente como topico planejado para a Parte II.
+- `price-updated` permanecia planejado para a Parte II naquele fechamento.
 
 Validacao:
 
@@ -973,3 +973,58 @@ Resultado da validacao:
 - `go test ./...` em `Payment.Service`: aprovado;
 - `dotnet build .\MicroservicesLab.sln`: aprovado;
 - `dotnet test .\MicroservicesLab.sln --no-build`: aprovado, 16/16 testes.
+
+## FASE 15 - Kafka PriceUpdated Stream
+
+Status: Concluido
+
+Criado:
+
+- `KafkaPublisher` no `PriceFeed.Service`;
+- evento JSON `PriceUpdated` com `symbol`, `price` em centavos e `occurredAt`;
+- publicacao no topico `price-updated`;
+- Kafka message key igual ao `symbol`;
+- configuracao `PRICE_KAFKA_ENABLED`, `PRICE_KAFKA_BOOTSTRAP_SERVERS` e `PRICE_KAFKA_TOPIC`;
+- topico `price-updated` com 3 partitions e replication factor 1 no `docker-compose.yml` e em `infra/kafka/create-topics.ps1`;
+- `pricefeed-service` no Docker Compose com Kafka habilitado;
+- lab `docs/labs/LAB-15-kafka-price-updated.md`;
+- testes unitarios para serializacao, key, configuracao e erro de escrita Kafka.
+
+Decisoes didaticas:
+
+- Kafka entra como adapter de `Publisher`; o nucleo do `PriceFeed` continua sem conhecer Kafka;
+- Kafka fica desabilitado por padrao para preservar `go run .` sem broker;
+- o evento nao usa envelope completo nesta fase, mantendo foco em producer, topic, key, partitions e stream;
+- `symbol` e a key para observar particionamento e ordering por ativo;
+- falha de escrita Kafka e registrada em log e nao derruba console, SSE ou gRPC;
+- retry sofisticado, outbox, DLQ, exactly-once e consumer de aplicacao ficam fora do escopo;
+- `Pricing.Service` nao foi alterado para consumir Kafka.
+
+Validacao:
+
+```powershell
+cd .\src\services\PriceFeed.Service
+go test ./...
+$env:CGO_ENABLED = "1"
+go test -race ./...
+cd ..\Payment.Service
+go test ./...
+cd ..\..\..
+dotnet build .\MicroservicesLab.sln
+dotnet test .\MicroservicesLab.sln --no-build
+```
+
+Resultado da validacao:
+
+- `go test ./...` em `PriceFeed.Service`: aprovado;
+- `go test -race ./...` com `CGO_ENABLED=1`: tentado, mas bloqueado porque `gcc` nao esta disponivel no `PATH`;
+- `go test ./...` em `Payment.Service`: aprovado;
+- `dotnet build .\MicroservicesLab.sln`: aprovado;
+- `dotnet test .\MicroservicesLab.sln --no-build`: aprovado, 16/16 testes;
+- `docker compose config --quiet`: aprovado;
+- Kafka isolado subiu com `docker compose -f .\infra\kafka\docker-compose.kafka.yml up -d`;
+- `price-updated` criado/listado com sucesso;
+- `price-updated`: 3 partitions, replication factor 1;
+- smoke test real: `PriceFeed.Service` publicou eventos reais no Kafka com `PRICE_KAFKA_ENABLED=true`, usando o `KafkaPublisher` assíncrono;
+- consumer CLI recebeu mensagens reais com key `PRIO3`, `ITUB4`, `WEGE3`, `PETR4` e `VALE3`;
+- consumer CLI com metadados mostrou `Partition:0 | Offset:0 | PRIO3 | {"symbol":"PRIO3","price":4835,...}`.

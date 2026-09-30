@@ -3,7 +3,8 @@ $ErrorActionPreference = "Stop"
 $topics = @(
     "order-created",
     "payment-approved",
-    "payment-rejected"
+    "payment-rejected",
+    "price-updated"
 )
 
 foreach ($topic in $topics) {

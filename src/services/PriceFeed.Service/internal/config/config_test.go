@@ -13,6 +13,9 @@ func TestLoadReturnsDefaults(t *testing.T) {
 	t.Setenv("PRICE_MAX_STEP_CENTS", "")
 	t.Setenv("PRICE_HTTP_ADDR", "")
 	t.Setenv("PRICE_GRPC_ADDR", "")
+	t.Setenv("PRICE_KAFKA_ENABLED", "")
+	t.Setenv("PRICE_KAFKA_BOOTSTRAP_SERVERS", "")
+	t.Setenv("PRICE_KAFKA_TOPIC", "")
 
 	cfg, err := Load()
 	if err != nil {
@@ -42,6 +45,18 @@ func TestLoadReturnsDefaults(t *testing.T) {
 	if cfg.GRPC.Addr != ":9090" {
 		t.Fatalf("GRPC Addr = %q, want :9090", cfg.GRPC.Addr)
 	}
+
+	if cfg.Kafka.Enabled {
+		t.Fatal("Kafka Enabled = true, want false")
+	}
+
+	if len(cfg.Kafka.Brokers) != 1 || cfg.Kafka.Brokers[0] != "localhost:9092" {
+		t.Fatalf("Kafka Brokers = %#v, want localhost:9092", cfg.Kafka.Brokers)
+	}
+
+	if cfg.Kafka.Topic != "price-updated" {
+		t.Fatalf("Kafka Topic = %q, want price-updated", cfg.Kafka.Topic)
+	}
 }
 
 func TestLoadReadsEnvironment(t *testing.T) {
@@ -52,6 +67,9 @@ func TestLoadReadsEnvironment(t *testing.T) {
 	t.Setenv("PRICE_MAX_STEP_CENTS", "7")
 	t.Setenv("PRICE_HTTP_ADDR", ":9090")
 	t.Setenv("PRICE_GRPC_ADDR", ":9191")
+	t.Setenv("PRICE_KAFKA_ENABLED", "true")
+	t.Setenv("PRICE_KAFKA_BOOTSTRAP_SERVERS", "localhost:9092,kafka:29092")
+	t.Setenv("PRICE_KAFKA_TOPIC", "prices")
 
 	cfg, err := Load()
 	if err != nil {
@@ -81,11 +99,32 @@ func TestLoadReadsEnvironment(t *testing.T) {
 	if cfg.GRPC.Addr != ":9191" {
 		t.Fatalf("GRPC Addr = %q, want :9191", cfg.GRPC.Addr)
 	}
+
+	if !cfg.Kafka.Enabled {
+		t.Fatal("Kafka Enabled = false, want true")
+	}
+
+	if len(cfg.Kafka.Brokers) != 2 || cfg.Kafka.Brokers[0] != "localhost:9092" || cfg.Kafka.Brokers[1] != "kafka:29092" {
+		t.Fatalf("Kafka Brokers = %#v, want localhost:9092 and kafka:29092", cfg.Kafka.Brokers)
+	}
+
+	if cfg.Kafka.Topic != "prices" {
+		t.Fatalf("Kafka Topic = %q, want prices", cfg.Kafka.Topic)
+	}
 }
 
 func TestLoadRejectsMissingInitialPrice(t *testing.T) {
 	t.Setenv("PRICE_SYMBOLS", "PETR4,VALE3")
 	t.Setenv("PRICE_INITIAL_PRICES", "PETR4=38.10")
+
+	_, err := Load()
+	if err == nil {
+		t.Fatal("Load() error = nil, want error")
+	}
+}
+
+func TestLoadRejectsInvalidKafkaEnabled(t *testing.T) {
+	t.Setenv("PRICE_KAFKA_ENABLED", "sometimes")
 
 	_, err := Load()
 	if err == nil {

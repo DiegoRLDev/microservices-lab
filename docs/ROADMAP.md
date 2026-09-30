@@ -25,14 +25,14 @@ Este e o roadmap oficial do laboratorio. As fases devem ser executadas uma por v
 
 A Parte I esta concluida. A Parte II foi iniciada pela FASE 13 e segue sendo executada uma fase por vez, somente por instrucao explicita.
 
-Entre a FASE 14 e a FASE 15 existe um mini-lab concluido de gRPC Server Streaming direto entre `PriceFeed.Service` e `Pricing.Service`. Ele e didatico e nao altera o status da FASE 15, que continua pendente.
+Entre a FASE 14 e a FASE 15 existe um mini-lab concluido de gRPC Server Streaming direto entre `PriceFeed.Service` e `Pricing.Service`. Ele e didatico e prepara a comparacao entre comunicacao direta e broker.
 
 | Fase | Descricao | Status |
 | ---- | --------- | ------ |
 | 13 | PriceFeed.Service Go | Concluido |
 | 14 | Realtime Delivery - SSE vs WebSocket | Concluido |
 | Mini-lab | gRPC Server Streaming Go -> .NET | Concluido |
-| 15 | Kafka PriceUpdated stream | Pendente |
+| 15 | Kafka PriceUpdated stream | Concluido |
 | 16 | Pricing.Service .NET | Pendente |
 | 17 | Concorrencia e backpressure | Pendente |
 | 18 | Consumer scaling | Pendente |
@@ -120,8 +120,10 @@ PriceProvider
                    +-------> gRPC Server Streaming
                                   Pricing.Service
           |
-          +-------> Kafka
-                   fase futura
+          +-------> KafkaPublisher
+                   |
+                   v
+              price-updated
 ```
 
 ## Evolucao Planejada
@@ -200,23 +202,19 @@ O intervalo de geracao devera permitir experimentos como `500ms`, `100ms`, `10ms
 
 ## Evento PriceUpdated
 
-Contrato inicial planejado:
+Contrato implementado na FASE 15:
 
 ```json
 {
-  "eventId": "uuid",
-  "eventType": "PriceUpdated",
   "symbol": "PETR4",
-  "price": 32.45,
-  "currency": "BRL",
-  "occurredAt": "timestamp",
-  "correlationId": "uuid"
+  "price": 3815,
+  "occurredAt": "2026-09-29T14:30:00Z"
 }
 ```
 
-O contrato definitivo podera ser refinado durante a implementacao, mantendo independencia de linguagem.
+O contrato e propositalmente simples para a fase: JSON independente de linguagem, com `price` em centavos (`int64`). Envelope completo, Schema Registry e Protobuf no Kafka ficam fora do escopo.
 
-Na FASE 15, `symbol` e a hipotese inicial para Kafka message key. Isso deve permitir estudar ordenacao por ativo dentro de uma partition:
+Na FASE 15, `symbol` e a Kafka message key. Isso permite estudar ordenacao por ativo dentro de uma partition:
 
 ```text
 PETR4 -> mesma partition para eventos de PETR4
@@ -232,7 +230,7 @@ Essa decisao devera ser validada na implementacao, porque uma key tambem influen
 | 13 | PriceFeed.Service Go | Criar um servico Go responsavel por fornecer um fluxo continuo de precos, iniciando com fonte simulada dinamica e desacoplada. | goroutines, channels, `context.Context`, fluxo continuo, configuracao, `PriceProvider`, `Publisher` | Concluido |
 | 14 | Realtime Delivery - SSE vs WebSocket | Estudar requisitos de entrega backend -> cliente e escolher conscientemente SSE para o fluxo atual, sem implementar WebSocket. | SSE, fluxo unidirecional, conexoes longas, clientes realtime, broadcasting | Concluido |
 | Mini-lab | gRPC Server Streaming Go -> .NET | Comparar streaming direto tipado com SSE antes de introduzir Kafka. | `.proto`, HTTP/2, server streaming, cancelamento por contexto, interoperabilidade Go -> .NET | Concluido |
-| 15 | Kafka PriceUpdated stream | Distribuir o fluxo de precos por Kafka usando eventos `PriceUpdated`. | throughput, partitions, ordering por key, `symbol` como key candidata, stream de eventos | Pendente |
+| 15 | Kafka PriceUpdated stream | Distribuir o fluxo de precos por Kafka usando eventos `PriceUpdated`. | producer, broker, topic, partitions, ordering por key, `symbol` como key, stream de eventos | Concluido |
 | 16 | Pricing.Service .NET | Consumir `price-updated` em .NET e manter ultimo preco conhecido por simbolo. | interoperabilidade Go -> Kafka -> .NET, contratos independentes de linguagem, estado derivado simples | Pendente |
 | 17 | Concorrencia e backpressure | Criar situacoes em que o producer e mais rapido que o consumer e observar limites do pipeline. | goroutines, buffered/unbuffered channels, worker pool, fan-out/fan-in, buffer cheio, consumer lag | Pendente |
 | 18 | Consumer scaling | Estudar como replicas de consumers se relacionam com partitions dentro de um consumer group. | consumer groups, partition assignment, rebalance, consumers x partitions, scaling util versus inutil | Pendente |

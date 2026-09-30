@@ -4,7 +4,7 @@ MicroservicesLab e um laboratorio pratico para estudar arquitetura de microservi
 
 O projeto foi construido em fases. A Parte I cobre os fundamentos de microservicos nas Fases 0-12 e esta concluida. A Parte II cobre sistemas distribuidos realtime nas Fases 13-22.
 
-A expansao realtime foi iniciada na FASE 13 com `PriceFeed.Service` em Go. Na FASE 14, o fluxo passou a ser entregue para clientes externos via SSE. Depois dela, um mini-lab didatico adicionou gRPC Server Streaming direto entre `PriceFeed.Service` e `Pricing.Service`. A FASE 15 permanece pendente e deve ser iniciada somente por instrucao explicita.
+A expansao realtime foi iniciada na FASE 13 com `PriceFeed.Service` em Go. Na FASE 14, o fluxo passou a ser entregue para clientes externos via SSE. Depois dela, um mini-lab didatico adicionou gRPC Server Streaming direto entre `PriceFeed.Service` e `Pricing.Service`. Na FASE 15, o mesmo fluxo passou a ser publicado no Kafka como `PriceUpdated` no topico `price-updated`. A FASE 16 permanece pendente e deve ser iniciada somente por instrucao explicita.
 
 ## Arquitetura
 
@@ -143,14 +143,13 @@ Exemplos futuros:
 - `order-created`
 - `payment-approved`
 - `payment-rejected`
-
-Topico planejado somente para a futura expansao realtime:
-
 - `price-updated`
 
 Na FASE 6, `Payment.Service` consome `order-created` e publica `payment-approved` ou `payment-rejected`. `Order.Service` consome esses eventos e atualiza o status do pedido.
 
 Na FASE 7, `Audit.Worker` consome `order-created`, `payment-approved` e `payment-rejected`, registrando os envelopes reais no banco `audit_db`.
+
+Na FASE 15, `PriceFeed.Service` publica `PriceUpdated` no topico `price-updated` quando `PRICE_KAFKA_ENABLED=true`.
 
 ## Roadmap
 
@@ -179,7 +178,7 @@ Na FASE 7, `Audit.Worker` consome `order-created`, `payment-approved` e `payment
 | ---- | --------- | ------ |
 | 13 | PriceFeed.Service Go | Concluido |
 | 14 | Realtime Delivery - SSE vs WebSocket | Concluido |
-| 15 | Kafka PriceUpdated stream | Pendente |
+| 15 | Kafka PriceUpdated stream | Concluido |
 | 16 | Pricing.Service .NET | Pendente |
 | 17 | Concorrencia e backpressure | Pendente |
 | 18 | Consumer scaling | Pendente |
@@ -207,6 +206,11 @@ PriceFeed.Service
       +-- ConsolePublisher
       |
       +-- Broadcaster
+      |
+      +-- KafkaPublisher
+              |
+              v
+        Kafka: price-updated
               |
               +-- GET /prices/stream
               |       |
@@ -278,7 +282,31 @@ dotnet run
 
 Lab: [Mini-lab Realtime gRPC](docs/labs/LAB-RT-GRPC-SERVER-STREAMING.md)
 
-Depois, a expansao podera evoluir para demonstrar interoperabilidade entre Go e .NET via Kafka:
+Na FASE 15, Kafka entra como broker entre produtor e consumidores futuros. O `PriceFeed.Service` publica eventos simples no topico `price-updated`, com 3 partitions e `symbol` como message key:
+
+```json
+{
+  "symbol": "PETR4",
+  "price": 3815,
+  "occurredAt": "2026-09-29T14:30:00Z"
+}
+```
+
+Kafka usa a key no particionamento. Eventos da mesma key devem ser direcionados consistentemente para uma partition pelo producer, e Kafka preserva ordering dentro da partition. Nao ha ordering global entre todas as partitions.
+
+Executar com Kafka habilitado:
+
+```powershell
+cd .\src\services\PriceFeed.Service
+$env:PRICE_KAFKA_ENABLED = "true"
+$env:PRICE_KAFKA_BOOTSTRAP_SERVERS = "localhost:9092"
+$env:PRICE_KAFKA_TOPIC = "price-updated"
+go run .
+```
+
+Lab: [LAB 15 - Kafka PriceUpdated](docs/labs/LAB-15-kafka-price-updated.md)
+
+Na FASE 16, a expansao podera evoluir para demonstrar interoperabilidade completa Go -> Kafka -> .NET:
 
 ```text
 PriceFeed.Service
@@ -293,7 +321,7 @@ PriceFeed.Service
         .NET
 ```
 
-Na FASE 15, `symbol` sera a key candidata do Kafka para estudar ordenacao por ativo dentro de partitions. Nas Fases 18 e 19, Kubernetes podera ser usado para subir replicas, mas o conceito principal sera a relacao entre consumer groups, partitions, ownership, rebalance e ordering.
+Na FASE 15, `symbol` e a Kafka message key para estudar ordenacao por ativo dentro de partitions. Nas Fases 18 e 19, Kubernetes podera ser usado para subir replicas, mas o conceito principal sera a relacao entre consumer groups, partitions, ownership, rebalance e ordering.
 
 ## Comandos
 
@@ -831,8 +859,8 @@ docs/guides/TROUBLESHOOTING.md
 
 A Parte I do MicroservicesLab esta concluida.
 
-A Parte II foi iniciada com a FASE 13 e ja possui entrega realtime via SSE na FASE 14. O proximo passo possivel e a FASE 15: Kafka PriceUpdated stream. Ela nao deve ser iniciada automaticamente. Use uma instrucao explicita quando quiser avancar:
+A Parte II foi iniciada com a FASE 13, ja possui entrega realtime via SSE, mini-lab gRPC e Kafka `price-updated` na FASE 15. O proximo passo possivel e a FASE 16: `Pricing.Service` .NET Kafka Consumer. Ela nao deve ser iniciada automaticamente. Use uma instrucao explicita quando quiser avancar:
 
 ```text
-Avance para a FASE 15.
+Avance para a FASE 16.
 ```

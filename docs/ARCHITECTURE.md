@@ -53,7 +53,7 @@ Na FASE 7, `Audit.Worker` consome `order-created`, `payment-approved` e `payment
 
 Servico Go implementado na FASE 13 para iniciar a Parte II.
 
-Foi escrito em Go para estudar fluxo continuo de precos, goroutines, channels, cancelamento com `context.Context`, streaming, conexoes longas, alto volume de mensagens, baixo overhead e futuras discussoes de backpressure. Na FASE 14, o servico passou a entregar o fluxo para clientes externos via SSE. Depois dela, um mini-lab adicionou gRPC Server Streaming para comparar streaming direto tipado com SSE antes da entrada de Kafka. A escolha de Go aqui e intencional: esse workload tem caracteristicas diferentes dos servicos de negocio da Parte I.
+Foi escrito em Go para estudar fluxo continuo de precos, goroutines, channels, cancelamento com `context.Context`, streaming, conexoes longas, alto volume de mensagens, baixo overhead e futuras discussoes de backpressure. Na FASE 14, o servico passou a entregar o fluxo para clientes externos via SSE. Depois dela, um mini-lab adicionou gRPC Server Streaming para comparar streaming direto tipado com SSE antes da entrada de Kafka. Na FASE 15, Kafka entrou como saida assíncrona opcional para o topico `price-updated`. A escolha de Go aqui e intencional: esse workload tem caracteristicas diferentes dos servicos de negocio da Parte I.
 
 O servico fornece atualizacoes continuas de precos, com origem desacoplada por `PriceProvider`. A implementacao inicial e `MockPriceProvider`, mas o nucleo do servico depende apenas da interface, permitindo substituir a fonte por API externa, WebSocket externo ou market data provider em fase futura.
 
@@ -61,7 +61,7 @@ Responsabilidades conceituais:
 
 - `PriceProvider`: de onde vem os precos;
 - `PriceFeed`: como o servico trabalha com o fluxo continuo;
-- `Publisher`: para onde os precos sao enviados. Na FASE 14, `ConsolePublisher` e `Broadcaster` recebem o mesmo fluxo por um `MultiPublisher`; no mini-lab gRPC, o server streaming assina o `Broadcaster`; Kafka fica para fase futura.
+- `Publisher`: para onde os precos sao enviados. Na FASE 15, `ConsolePublisher`, `Broadcaster` e `KafkaPublisher` recebem o mesmo fluxo por um `MultiPublisher`; SSE e gRPC assinam o `Broadcaster`, enquanto Kafka recebe eventos `PriceUpdated`.
 
 ### Pricing.Service
 
@@ -110,9 +110,9 @@ Na FASE 8, o ambiente completo roda via `docker compose up -d --build`. Dentro d
 
 O Compose principal cria topicos Kafka por meio do servico `kafka-init` e usa volumes nomeados `postgres_data` e `kafka_data`. As migrations EF Core de `Order.Service`, `Inventory.Service` e `Audit.Worker` sao aplicadas na inicializacao quando `Database__ApplyMigrations=true` esta configurado.
 
-Na Parte II, Kafka tambem sera usado futuramente para demonstrar interoperabilidade entre Go e .NET com o topico `price-updated`. Na FASE 14, `PriceFeed.Service` publica no console local e entrega o fluxo via SSE em `GET /prices/stream`. No mini-lab intermediario, o mesmo fluxo tambem e exposto por gRPC Server Streaming usando `src/protos/pricefeed.proto`. Quando Kafka entrar, o produtor Go nao devera depender de tipos .NET, e o consumidor .NET nao devera depender de tipos Go. A integracao acontecera pelo contrato do evento.
+Na Parte II, Kafka tambem e usado para demonstrar interoperabilidade futura entre Go e .NET com o topico `price-updated`. Na FASE 14, `PriceFeed.Service` publica no console local e entrega o fluxo via SSE em `GET /prices/stream`. No mini-lab intermediario, o mesmo fluxo tambem e exposto por gRPC Server Streaming usando `src/protos/pricefeed.proto`. Na FASE 15, o produtor Go publica `PriceUpdated` no Kafka sem conhecer consumidores. O futuro consumidor .NET nao devera depender de tipos Go; a integracao acontecera pelo JSON do evento.
 
-Na FASE 15, `symbol` sera a key candidata do Kafka para estudar ordenacao por ativo dentro de uma partition. Essa escolha tambem devera ser observada do ponto de vista de distribuicao de carga, porque keys muito concentradas podem limitar paralelismo.
+Na FASE 15, `symbol` e a message key do Kafka para estudar ordenacao por ativo dentro de uma partition. Kafka preserva ordering dentro da partition, mas nao fornece ordering global entre partitions. Essa escolha tambem devera ser observada futuramente do ponto de vista de distribuicao de carga, porque keys muito concentradas podem limitar paralelismo.
 
 ## Envelope de Eventos
 
@@ -138,21 +138,17 @@ Na FASE 6, `Shared.Contracts` passa a registrar `PaymentApprovedData` e `Payment
 
 Na FASE 7, o `Audit.Worker` nao precisa conhecer os tipos concretos de `data` para auditar. Ele le os campos comuns do envelope e armazena o JSON completo em `payload`.
 
-Para a expansao realtime, o evento inicial planejado e:
+Para a expansao realtime, o evento implementado na FASE 15 e:
 
 ```json
 {
-  "eventId": "uuid",
-  "eventType": "PriceUpdated",
   "symbol": "PETR4",
-  "price": 32.45,
-  "currency": "BRL",
-  "occurredAt": "2026-08-31T12:00:00Z",
-  "correlationId": "uuid"
+  "price": 3815,
+  "occurredAt": "2026-09-29T14:30:00Z"
 }
 ```
 
-Esse contrato podera ser refinado na FASE 15, mas devera permanecer independente de linguagem.
+O contrato e simples de proposito: `price` permanece em centavos (`int64`), e o evento nao usa envelope completo nesta fase. A meta e estudar stream, key, partitions e desacoplamento temporal antes de adicionar consumidor de aplicacao.
 
 ## Idempotencia
 
@@ -332,13 +328,47 @@ MultiPublisher
               +--> gRPC StreamPrices clients
 ```
 
-Kafka permanece fora deste mini-lab. A FASE 15 continua responsavel por `PriceUpdated` em broker, partitions, key e delivery semantics.
+Kafka permanece fora deste mini-lab. A FASE 15 e responsavel por `PriceUpdated` em broker, partitions, key e delivery semantics.
 
 ### FASE 15 - Kafka PriceUpdated
 
-Publicar `PriceUpdated` no topico `price-updated`, estudando producer, partitions, message key, ordering, throughput, serializacao, retries e delivery semantics em fluxo continuo.
+Implementada. `KafkaPublisher` e um adapter de `Publisher` no `PriceFeed.Service`, configurado por:
 
-`symbol` sera o candidato inicial a message key, porque preserva ordenacao por ativo dentro de uma partition, mas tambem concentra carga se poucos simbolos forem muito ativos.
+```text
+PRICE_KAFKA_ENABLED
+PRICE_KAFKA_BOOTSTRAP_SERVERS
+PRICE_KAFKA_TOPIC
+```
+
+O topico `price-updated` tem 3 partitions e replication factor 1 no ambiente single-node. A criacao continua idempotente junto com `order-created`, `payment-approved` e `payment-rejected`.
+
+Fluxo:
+
+```text
+MockPriceProvider
+      |
+      v
+PriceFeed
+      |
+      v
+MultiPublisher
+      |
+      +--> ConsolePublisher
+      |
+      +--> Broadcaster
+      |       |
+      |       +--> SSE clients
+      |       +--> gRPC StreamPrices clients
+      |
+      +--> KafkaPublisher
+              |
+              v
+         price-updated
+```
+
+Falhas de escrita Kafka sao registradas em log e nao derrubam o feed. A decisao e didatica: console, SSE e gRPC continuam funcionando enquanto Kafka indisponivel fica visivel. Retry sofisticado, outbox, DLQ e exactly-once ficam fora desta fase.
+
+`symbol` e a message key, porque preserva ordenacao por ativo dentro de uma partition, mas tambem pode concentrar carga se poucos simbolos forem muito ativos.
 
 ### FASE 16 - Pricing.Service em .NET
 

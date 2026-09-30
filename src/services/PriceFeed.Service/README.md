@@ -2,15 +2,16 @@
 
 `PriceFeed.Service` e o servico Go introduzido na FASE 13 da Parte II - Realtime Distributed Systems.
 
-Ele produz um fluxo continuo de atualizacoes de precos usando uma fonte simulada (`MockPriceProvider`), publica localmente no console, entrega o mesmo fluxo para clientes externos via SSE e expoe um mini-lab didatico de gRPC Server Streaming para o `Pricing.Service`. Kafka, WebSocket, Kubernetes e testes de carga ficam para fases futuras.
+Ele produz um fluxo continuo de atualizacoes de precos usando uma fonte simulada (`MockPriceProvider`), publica localmente no console, entrega o mesmo fluxo para clientes externos via SSE, expoe um mini-lab didatico de gRPC Server Streaming para o `Pricing.Service` e, quando habilitado, publica `PriceUpdated` no Kafka. WebSocket, Kubernetes e testes de carga ficam para fases futuras.
 
 ## Responsabilidades
 
 - `PriceProvider`: origem dos precos. Nesta fase, `MockPriceProvider`.
 - `PriceFeed`: consome o fluxo do provider e encaminha para um publisher.
-- `Publisher`: destino das atualizacoes. Nesta fase, `ConsolePublisher` e `Broadcaster` por meio de `MultiPublisher`.
+- `Publisher`: destino das atualizacoes. Nesta fase, `ConsolePublisher`, `Broadcaster` e, opcionalmente, `KafkaPublisher` por meio de `MultiPublisher`.
 - `Broadcaster`: distribui cada atualizacao para subscribers independentes.
 - `grpcdelivery`: adaptador de transporte para gRPC Server Streaming, consumindo o `Broadcaster` sem acoplar o nucleo do feed ao gRPC.
+- `kafkadelivery`: adaptador de publicacao Kafka, consumindo `PriceUpdate` como publisher sem acoplar o nucleo do feed ao Kafka.
 
 ## MockPriceProvider
 
@@ -62,6 +63,9 @@ PRICE_INITIAL_PRICES=PETR4=38.10,VALE3=74.21,ITUB4=42.95,WEGE3=39.80,PRIO3=48.35
 PRICE_MAX_STEP_CENTS=5
 PRICE_HTTP_ADDR=:8080
 PRICE_GRPC_ADDR=:9090
+PRICE_KAFKA_ENABLED=false
+PRICE_KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+PRICE_KAFKA_TOPIC=price-updated
 ```
 
 Todas possuem valores padrao.
@@ -122,6 +126,46 @@ dotnet run
 ```
 
 O cliente abre uma chamada `StreamPrices` e recebe varias mensagens `PriceUpdate` na mesma conexao. Use `Ctrl+C` no cliente para cancelar apenas a assinatura gRPC; o `PriceFeed.Service` continua executando.
+
+## Kafka PriceUpdated
+
+Na FASE 15, Kafka foi adicionado como uma saida opcional do mesmo fluxo:
+
+```text
+PriceFeed
+   |
+MultiPublisher
+   |
+   +-- ConsolePublisher
+   +-- Broadcaster -> SSE / gRPC
+   +-- KafkaPublisher -> price-updated
+```
+
+Kafka fica desabilitado por padrao para preservar os labs locais com `go run .` sem broker.
+
+Para habilitar:
+
+```powershell
+cd .\src\services\PriceFeed.Service
+$env:PRICE_KAFKA_ENABLED = "true"
+$env:PRICE_KAFKA_BOOTSTRAP_SERVERS = "localhost:9092"
+$env:PRICE_KAFKA_TOPIC = "price-updated"
+go run .
+```
+
+Evento publicado:
+
+```json
+{
+  "symbol": "PETR4",
+  "price": 3815,
+  "occurredAt": "2026-09-29T14:30:00Z"
+}
+```
+
+`price` continua em centavos (`int64`). A Kafka message key e o proprio `symbol`, por exemplo `PETR4`. Isso permite observar particionamento e ordering por ativo: Kafka preserva a ordem dentro de uma partition, mas nao existe ordering global entre partitions.
+
+Politica de erro: falhas de escrita no Kafka sao registradas em log e nao derrubam o feed. Console, SSE e gRPC continuam funcionando. Retry sofisticado, outbox, DLQ e exactly-once ficam fora desta fase.
 
 ## Broadcasting e Clientes Lentos
 

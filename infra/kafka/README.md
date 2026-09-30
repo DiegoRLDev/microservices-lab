@@ -56,6 +56,14 @@ payment-rejected
 
 Na FASE 7, `Audit.Worker` consome `order-created`, `payment-approved` e `payment-rejected`. O topico `audit-events` nao esta ativo nesta fase.
 
+Na FASE 15, o `PriceFeed.Service` publica atualizacoes de preco em:
+
+```text
+price-updated
+```
+
+Esse topico usa 3 partitions e replication factor 1 no ambiente Kafka single-node do laboratorio.
+
 ## Criar Topicos
 
 ```powershell
@@ -77,6 +85,7 @@ Alternativa sem executar script PowerShell:
 
 ```powershell
 docker exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --if-not-exists --topic order-created --partitions 3 --replication-factor 1
+docker exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --if-not-exists --topic price-updated --partitions 3 --replication-factor 1
 ```
 
 ## Listar Topicos
@@ -94,6 +103,14 @@ docker exec -it kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-serve
 ```
 
 A chave impressa antes do separador deve ser o `OrderId`.
+
+Para visualizar `PriceUpdated` publicado pelo `PriceFeed.Service`:
+
+```powershell
+docker exec -it kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic price-updated --from-beginning --property print.key=true --property key.separator=" | "
+```
+
+A chave impressa antes do separador deve ser o `symbol`, por exemplo `PETR4`.
 
 ## Producer do Order.Service
 

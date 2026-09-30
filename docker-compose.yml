@@ -57,6 +57,7 @@ services:
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic order-created --partitions 3 --replication-factor 1
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic payment-approved --partitions 3 --replication-factor 1
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic payment-rejected --partitions 3 --replication-factor 1
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic price-updated --partitions 3 --replication-factor 1
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --list
     restart: "no"
 
@@ -152,6 +153,27 @@ services:
         condition: service_completed_successfully
       order-service:
         condition: service_healthy
+
+  pricefeed-service:
+    build:
+      context: .
+      dockerfile: src/services/PriceFeed.Service/Dockerfile
+    environment:
+      PRICE_PROVIDER: mock
+      PRICE_UPDATE_INTERVAL: 500ms
+      PRICE_HTTP_ADDR: :8080
+      PRICE_GRPC_ADDR: :8081
+      PRICE_KAFKA_ENABLED: "true"
+      PRICE_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      PRICE_KAFKA_TOPIC: price-updated
+    ports:
+      - "5080:8080"
+      - "19090:8081"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
 
   audit-worker:
     build:

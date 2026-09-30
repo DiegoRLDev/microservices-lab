@@ -22,6 +22,7 @@ Kubernetes:     kubectl apply -k k8s
 | [LAB 07](LAB-07-kubernetes-scaling.md) | Kubernetes Scaling |
 | [LAB 08](LAB-08-troubleshooting-kubernetes-kafka.md) | Troubleshooting Kubernetes/Kafka |
 | [Mini-lab Realtime gRPC](LAB-RT-GRPC-SERVER-STREAMING.md) | gRPC Server Streaming entre PriceFeed.Service e Pricing.Service |
+| [LAB 15](LAB-15-kafka-price-updated.md) | Kafka PriceUpdated stream |
 
 ## Guias de Apoio
 

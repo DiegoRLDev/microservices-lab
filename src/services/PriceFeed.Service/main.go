@@ -16,6 +16,7 @@ import (
 	"microserviceslab/pricefeed-service/internal/grpcdelivery"
 	"microserviceslab/pricefeed-service/internal/grpcdelivery/pricefeedpb"
 	"microserviceslab/pricefeed-service/internal/httpdelivery"
+	"microserviceslab/pricefeed-service/internal/kafkadelivery"
 	"microserviceslab/pricefeed-service/internal/pricefeed"
 )
 
@@ -45,10 +46,18 @@ func main() {
 	}
 
 	broadcaster := pricefeed.NewBroadcaster(pricefeed.DefaultSubscriberBuffer)
-	publisher := pricefeed.NewMultiPublisher(
+	publishers := []pricefeed.Publisher{
 		pricefeed.NewConsolePublisher(os.Stdout),
 		broadcaster,
-	)
+	}
+
+	var kafkaPublisher *kafkadelivery.KafkaPublisher
+	if cfg.Kafka.Enabled {
+		kafkaPublisher = kafkadelivery.NewKafkaPublisher(cfg.Kafka.Brokers, cfg.Kafka.Topic, logger)
+		publishers = append(publishers, kafkaPublisher)
+	}
+
+	publisher := pricefeed.NewMultiPublisher(publishers...)
 	feed := pricefeed.NewFeed(provider, publisher)
 	httpDelivery := httpdelivery.NewServer(broadcaster, logger)
 	httpServer := &http.Server{
@@ -71,6 +80,9 @@ func main() {
 		slog.Int("maxStepCents", cfg.PriceFeed.MaxStepCents),
 		slog.String("httpAddr", cfg.HTTP.Addr),
 		slog.String("grpcAddr", cfg.GRPC.Addr),
+		slog.Bool("kafkaEnabled", cfg.Kafka.Enabled),
+		slog.Any("kafkaBrokers", cfg.Kafka.Brokers),
+		slog.String("kafkaTopic", cfg.Kafka.Topic),
 	)
 
 	go func() {
@@ -118,6 +130,12 @@ func main() {
 		exitCode = 1
 	}
 	grpcdelivery.Shutdown(shutdownCtx, grpcServer.Stop, grpcServer.GracefulStop)
+	if kafkaPublisher != nil {
+		if err := kafkaPublisher.Close(); err != nil {
+			logger.Error("Kafka publisher shutdown failed", slog.String("error", err.Error()))
+			exitCode = 1
+		}
+	}
 
 	logger.Info("PriceFeed.Service stopped")
 

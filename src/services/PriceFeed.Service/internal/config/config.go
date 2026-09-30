@@ -18,12 +18,16 @@ const (
 	defaultMaxStepCents   = 5
 	defaultHTTPAddr       = ":8080"
 	defaultGRPCAddr       = ":9090"
+	defaultKafkaEnabled   = false
+	defaultKafkaBrokers   = "localhost:9092"
+	defaultKafkaTopic     = "price-updated"
 )
 
 type Config struct {
 	PriceFeed PriceFeedConfig
 	HTTP      HTTPConfig
 	GRPC      GRPCConfig
+	Kafka     KafkaConfig
 }
 
 type PriceFeedConfig struct {
@@ -42,13 +46,19 @@ type GRPCConfig struct {
 	Addr string
 }
 
+type KafkaConfig struct {
+	Enabled bool
+	Brokers []string
+	Topic   string
+}
+
 func Load() (Config, error) {
 	provider := readString("PRICE_PROVIDER", defaultProvider)
 	if provider != "mock" {
 		return Config{}, fmt.Errorf("PRICE_PROVIDER %q is not supported", provider)
 	}
 
-	symbols := readCSV("PRICE_SYMBOLS", defaultSymbols)
+	symbols := readSymbolsCSV("PRICE_SYMBOLS", defaultSymbols)
 	if len(symbols) == 0 {
 		return Config{}, fmt.Errorf("PRICE_SYMBOLS must contain at least one symbol")
 	}
@@ -74,6 +84,16 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
+	kafkaEnabled, err := readBool("PRICE_KAFKA_ENABLED", defaultKafkaEnabled)
+	if err != nil {
+		return Config{}, err
+	}
+
+	kafkaBrokers := readCSV("PRICE_KAFKA_BOOTSTRAP_SERVERS", defaultKafkaBrokers)
+	if kafkaEnabled && len(kafkaBrokers) == 0 {
+		return Config{}, fmt.Errorf("PRICE_KAFKA_BOOTSTRAP_SERVERS must contain at least one broker when Kafka is enabled")
+	}
+
 	return Config{
 		PriceFeed: PriceFeedConfig{
 			Provider:       provider,
@@ -87,6 +107,11 @@ func Load() (Config, error) {
 		},
 		GRPC: GRPCConfig{
 			Addr: readString("PRICE_GRPC_ADDR", defaultGRPCAddr),
+		},
+		Kafka: KafkaConfig{
+			Enabled: kafkaEnabled,
+			Brokers: kafkaBrokers,
+			Topic:   readString("PRICE_KAFKA_TOPIC", defaultKafkaTopic),
 		},
 	}, nil
 }
@@ -106,10 +131,19 @@ func readCSV(key string, fallback string) []string {
 	values := make([]string, 0, len(parts))
 
 	for _, part := range parts {
-		value := strings.ToUpper(strings.TrimSpace(part))
+		value := strings.TrimSpace(part)
 		if value != "" {
 			values = append(values, value)
 		}
+	}
+
+	return values
+}
+
+func readSymbolsCSV(key string, fallback string) []string {
+	values := readCSV(key, fallback)
+	for index, value := range values {
+		values[index] = strings.ToUpper(value)
 	}
 
 	return values
@@ -128,6 +162,20 @@ func readDuration(key string, fallback time.Duration) (time.Duration, error) {
 
 	if value <= 0 {
 		return 0, fmt.Errorf("%s must be greater than zero", key)
+	}
+
+	return value, nil
+}
+
+func readBool(key string, fallback bool) (bool, error) {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		return fallback, nil
+	}
+
+	value, err := strconv.ParseBool(raw)
+	if err != nil {
+		return false, fmt.Errorf("%s must be a valid boolean: %w", key, err)
 	}
 
 	return value, nil
