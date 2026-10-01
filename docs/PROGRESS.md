@@ -32,7 +32,7 @@ O laboratorio esta organizado em duas partes:
 | 14 | Realtime Delivery - SSE vs WebSocket | Concluido |
 | Mini-lab | gRPC Server Streaming Go -> .NET | Concluido |
 | 15 | Kafka PriceUpdated stream | Concluido |
-| 16 | Pricing.Service .NET | Pendente |
+| 16 | Pricing.Service .NET | Concluido |
 | 17 | Concorrencia e backpressure | Pendente |
 | 18 | Consumer scaling | Pendente |
 | 19 | Multiplas instancias e partitioning | Pendente |
@@ -65,7 +65,7 @@ dotnet build .\MicroservicesLab.sln
 
 A Parte II adicionou `PriceFeed.Service` em Go para estudar fluxo continuo de dados, concorrencia, throughput, backpressure, particionamento, consumer lag, escalabilidade e comportamento sob carga/falhas.
 
-Tambem esta planejado evoluir `Pricing.Service` em .NET para consumir `PriceUpdated` e demonstrar interoperabilidade Go -> Kafka -> .NET usando contratos independentes de linguagem.
+O `Pricing.Service` em .NET agora consome `PriceUpdated` e demonstra interoperabilidade Go -> Kafka -> .NET usando contratos independentes de linguagem.
 
 A Parte II sera organizada em quatro blocos conceituais:
 
@@ -941,7 +941,7 @@ Decisoes didaticas:
 - gRPC assina o mesmo `Broadcaster` usado pelo SSE;
 - `Pricing.Service` nao recebeu banco, REST, Clean Architecture, MediatR ou consumo Kafka nesta etapa;
 - Kafka e o evento `PriceUpdated` permanecem para a FASE 15;
-- a FASE 16 continua reservada para evoluir `Pricing.Service` como consumidor Kafka com estado derivado.
+- posteriormente, a FASE 16 evoluiu `Pricing.Service` como consumidor Kafka com estado derivado.
 
 Validacao:
 
@@ -1028,3 +1028,62 @@ Resultado da validacao:
 - smoke test real: `PriceFeed.Service` publicou eventos reais no Kafka com `PRICE_KAFKA_ENABLED=true`, usando o `KafkaPublisher` assíncrono;
 - consumer CLI recebeu mensagens reais com key `PRIO3`, `ITUB4`, `WEGE3`, `PETR4` e `VALE3`;
 - consumer CLI com metadados mostrou `Partition:0 | Offset:0 | PRIO3 | {"symbol":"PRIO3","price":4835,...}`.
+
+## FASE 16 - Pricing.Service .NET
+
+Status: Concluido
+
+Criado/evoluido:
+
+- `Pricing.Service` deixou de ser apenas console gRPC e passou a ser uma minimal API .NET;
+- `KafkaPriceUpdatedConsumer` consumindo o topico `price-updated`;
+- consumer group `pricing-service`;
+- contrato .NET `PriceUpdatedEvent` com `Symbol`, `Price` em centavos e `OccurredAt`;
+- validacao minima do JSON recebido;
+- aviso em log quando Kafka key e `symbol` divergem;
+- `LatestPriceStore` thread-safe em memoria para ultimo preco conhecido por simbolo;
+- endpoints `GET /health`, `GET /prices` e `GET /prices/{symbol}`;
+- modo opcional `GrpcLab:Enabled=true` preservando o mini-lab de gRPC Server Streaming;
+- `pricing-service` no Docker Compose, publicado em `http://localhost:5090`;
+- testes automatizados para store, parser e endpoints;
+- lab `docs/labs/LAB-16-pricing-service-kafka.md`.
+
+Decisoes didaticas:
+
+- Kafka e o caminho principal da FASE 16 para alimentar o estado derivado;
+- gRPC continua como comunicacao direta de laboratorio, mas nao alimenta o estado REST;
+- `ConcurrentDictionary` foi usado porque ha escrita pelo consumer Kafka e leituras simultaneas via HTTP;
+- nao foram adicionados banco, Redis, CQRS, Event Sourcing, DLQ, retry sofisticado ou backpressure;
+- `AutoOffsetReset=Earliest` permite que um consumer group novo leia desde o inicio do log retido; grupos existentes retomam dos offsets commitados.
+
+Validacao:
+
+```powershell
+dotnet test .\tests\Pricing.Service.Tests\Pricing.Service.Tests.csproj
+dotnet build .\src\services\Pricing.Service\Pricing.Service.csproj
+dotnet build .\MicroservicesLab.sln
+dotnet test .\MicroservicesLab.sln
+cd .\src\services\PriceFeed.Service
+go test ./...
+cd ..\Payment.Service
+go test ./...
+docker compose config --quiet
+```
+
+Resultado da validacao:
+
+- `Pricing.Service.Tests`: aprovado, 11/11 testes;
+- build isolado do `Pricing.Service`: aprovado;
+- `dotnet build .\MicroservicesLab.sln`: aprovado, 0 warnings, 0 errors;
+- `dotnet test .\MicroservicesLab.sln`: aprovado, 27/27 testes;
+- `go test ./...` em `PriceFeed.Service`: aprovado;
+- `go test ./...` em `Payment.Service`: aprovado;
+- `docker compose config --quiet`: aprovado;
+- smoke real: Kafka existente em `localhost:9092` estava saudavel no container `microservices-lab-kafka-1`;
+- topico `price-updated`: 3 partitions, replication factor 1;
+- `PriceFeed.Service` publicou eventos reais com `PRICE_KAFKA_ENABLED=true`;
+- `Pricing.Service` consumiu `price-updated` com o consumer group `pricing-service-smoke-fase16`;
+- `GET /health` retornou `Healthy`;
+- `GET /prices` retornou estado derivado real, incluindo `PRIO3`;
+- `GET /prices/PRIO3` retornou `{"symbol":"PRIO3","price":5279,"occurredAt":"2026-10-01T10:33:27.9110091-03:00"}`;
+- interrupcao e reinicio do `Pricing.Service` foram testados mantendo `PriceFeed.Service` produzindo; apos reiniciar, o consumer group voltou a consumir e a API exibiu estado derivado novamente.

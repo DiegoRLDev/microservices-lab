@@ -33,7 +33,7 @@ Entre a FASE 14 e a FASE 15 existe um mini-lab concluido de gRPC Server Streamin
 | 14 | Realtime Delivery - SSE vs WebSocket | Concluido |
 | Mini-lab | gRPC Server Streaming Go -> .NET | Concluido |
 | 15 | Kafka PriceUpdated stream | Concluido |
-| 16 | Pricing.Service .NET | Pendente |
+| 16 | Pricing.Service .NET | Concluido |
 | 17 | Concorrencia e backpressure | Pendente |
 | 18 | Consumer scaling | Pendente |
 | 19 | Multiplas instancias e partitioning | Pendente |
@@ -146,6 +146,27 @@ Pricing.Service
      .NET
 ```
 
+Implementado na FASE 16:
+
+```text
+PriceFeed.Service
+        Go
+         |
+         | PriceUpdated
+         v
+       Kafka
+    price-updated
+         |
+         v
+   Pricing.Service
+        .NET
+         |
+         +-- KafkaPriceUpdatedConsumer
+         +-- LatestPriceStore em memoria
+         +-- GET /prices
+         +-- GET /prices/{symbol}
+```
+
 Essa evolucao demonstra interoperabilidade:
 
 ```text
@@ -231,7 +252,7 @@ Essa decisao devera ser validada na implementacao, porque uma key tambem influen
 | 14 | Realtime Delivery - SSE vs WebSocket | Estudar requisitos de entrega backend -> cliente e escolher conscientemente SSE para o fluxo atual, sem implementar WebSocket. | SSE, fluxo unidirecional, conexoes longas, clientes realtime, broadcasting | Concluido |
 | Mini-lab | gRPC Server Streaming Go -> .NET | Comparar streaming direto tipado com SSE antes de introduzir Kafka. | `.proto`, HTTP/2, server streaming, cancelamento por contexto, interoperabilidade Go -> .NET | Concluido |
 | 15 | Kafka PriceUpdated stream | Distribuir o fluxo de precos por Kafka usando eventos `PriceUpdated`. | producer, broker, topic, partitions, ordering por key, `symbol` como key, stream de eventos | Concluido |
-| 16 | Pricing.Service .NET | Consumir `price-updated` em .NET e manter ultimo preco conhecido por simbolo. | interoperabilidade Go -> Kafka -> .NET, contratos independentes de linguagem, estado derivado simples | Pendente |
+| 16 | Pricing.Service .NET | Consumir `price-updated` em .NET e manter ultimo preco conhecido por simbolo. | interoperabilidade Go -> Kafka -> .NET, contratos independentes de linguagem, estado derivado simples | Concluido |
 | 17 | Concorrencia e backpressure | Criar situacoes em que o producer e mais rapido que o consumer e observar limites do pipeline. | goroutines, buffered/unbuffered channels, worker pool, fan-out/fan-in, buffer cheio, consumer lag | Pendente |
 | 18 | Consumer scaling | Estudar como replicas de consumers se relacionam com partitions dentro de um consumer group. | consumer groups, partition assignment, rebalance, consumers x partitions, scaling util versus inutil | Pendente |
 | 19 | Multiplas instancias e partitioning | Aprofundar como Kafka distribui trabalho e preserva ordenacao com multiplas instancias. | key, partition, ownership, ordering por simbolo, rebalance, comportamento distribuido real | Pendente |

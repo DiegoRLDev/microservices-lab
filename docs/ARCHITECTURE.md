@@ -65,9 +65,21 @@ Responsabilidades conceituais:
 
 ### Pricing.Service
 
-Servico .NET iniciado como cliente didatico no mini-lab de gRPC Server Streaming.
+Servico .NET iniciado como cliente didatico no mini-lab de gRPC Server Streaming e evoluido na FASE 16 para consumir `price-updated` via Kafka.
 
-Nesta etapa intermediaria, ele nao possui REST, banco, regras de dominio ou consumo Kafka. Ele abre uma chamada `StreamPrices` contra o `PriceFeed.Service`, consome continuamente `PriceUpdate` via gRPC e imprime o fluxo recebido. Na futura FASE 16, o servico podera evoluir para consumir eventos `PriceUpdated` publicados via Kafka e manter o ultimo preco conhecido por simbolo.
+Na FASE 16, Kafka passa a ser o mecanismo principal para alimentar o estado atual do servico. O `KafkaPriceUpdatedConsumer` consome eventos `PriceUpdated`, valida o contrato JSON, registra divergencia entre Kafka key e `symbol` quando ela aparece e atualiza `LatestPriceStore`.
+
+O estado e mantido em memoria por simbolo, usando `ConcurrentDictionary`. Essa escolha e suficiente para o laboratorio porque existe escrita pelo consumer Kafka e leitura simultanea pelos endpoints HTTP, sem exigir banco, Redis, CQRS ou Event Sourcing.
+
+Endpoints:
+
+```text
+GET /health
+GET /prices
+GET /prices/{symbol}
+```
+
+O mini-lab gRPC continua preservado por configuracao (`GrpcLab:Enabled=true`). Nesse modo, o servico abre uma chamada `StreamPrices` contra o `PriceFeed.Service` e imprime o fluxo recebido, mas esse caminho nao alimenta o estado REST da FASE 16.
 
 ## Dono dos Dados
 
@@ -80,7 +92,7 @@ Cada servico controla suas proprias tabelas ou banco:
 | Payment.Service | sem persistencia propria na FASE 8 |
 | Audit.Worker | `AuditEvent` em `audit_db` |
 | PriceFeed.Service | eventos de preco em memoria/stream, sem persistencia propria |
-| Pricing.Service | sem persistencia; cliente gRPC didatico no mini-lab, estado derivado planejado para a FASE 16 |
+| Pricing.Service | ultimo preco conhecido por simbolo em memoria, derivado do stream Kafka `price-updated` |
 
 Nenhum servico acessara tabelas de outro servico. Essa regra evita acoplamento por banco, que costuma parecer simples no inicio e caro quando a arquitetura precisa evoluir.
 
@@ -110,7 +122,7 @@ Na FASE 8, o ambiente completo roda via `docker compose up -d --build`. Dentro d
 
 O Compose principal cria topicos Kafka por meio do servico `kafka-init` e usa volumes nomeados `postgres_data` e `kafka_data`. As migrations EF Core de `Order.Service`, `Inventory.Service` e `Audit.Worker` sao aplicadas na inicializacao quando `Database__ApplyMigrations=true` esta configurado.
 
-Na Parte II, Kafka tambem e usado para demonstrar interoperabilidade futura entre Go e .NET com o topico `price-updated`. Na FASE 14, `PriceFeed.Service` publica no console local e entrega o fluxo via SSE em `GET /prices/stream`. No mini-lab intermediario, o mesmo fluxo tambem e exposto por gRPC Server Streaming usando `src/protos/pricefeed.proto`. Na FASE 15, o produtor Go publica `PriceUpdated` no Kafka sem conhecer consumidores. O futuro consumidor .NET nao devera depender de tipos Go; a integracao acontecera pelo JSON do evento.
+Na Parte II, Kafka tambem e usado para demonstrar interoperabilidade entre Go e .NET com o topico `price-updated`. Na FASE 14, `PriceFeed.Service` publica no console local e entrega o fluxo via SSE em `GET /prices/stream`. No mini-lab intermediario, o mesmo fluxo tambem e exposto por gRPC Server Streaming usando `src/protos/pricefeed.proto`. Na FASE 15, o produtor Go publica `PriceUpdated` no Kafka sem conhecer consumidores. Na FASE 16, `Pricing.Service` consome esse JSON sem depender de tipos Go e constroi estado derivado atual.
 
 Na FASE 15, `symbol` e a message key do Kafka para estudar ordenacao por ativo dentro de uma partition. Kafka preserva ordering dentro da partition, mas nao fornece ordering global entre partitions. Essa escolha tambem devera ser observada futuramente do ponto de vista de distribuicao de carga, porque keys muito concentradas podem limitar paralelismo.
 
@@ -148,7 +160,7 @@ Para a expansao realtime, o evento implementado na FASE 15 e:
 }
 ```
 
-O contrato e simples de proposito: `price` permanece em centavos (`int64`), e o evento nao usa envelope completo nesta fase. A meta e estudar stream, key, partitions e desacoplamento temporal antes de adicionar consumidor de aplicacao.
+O contrato e simples de proposito: `price` permanece em centavos (`int64`), e o evento nao usa envelope completo nesta fase. A meta e estudar stream, key, partitions, desacoplamento temporal e estado derivado sem introduzir Schema Registry ou Event Sourcing.
 
 ## Idempotencia
 
@@ -306,7 +318,7 @@ service PriceFeed {
 
 O adaptador Go `grpcdelivery` assina o `Broadcaster`, converte `PriceUpdate` para o contrato Protobuf e envia mensagens no stream gRPC. O nucleo do `PriceFeed` continua sem conhecer gRPC, SSE, .NET ou Kafka.
 
-O `Pricing.Service` atual e apenas um console .NET de laboratorio. Ele conecta em `PRICE_FEED_GRPC_ADDRESS`, chama `StreamPrices`, imprime as atualizacoes e respeita cancelamento por `Ctrl+C`.
+O `Pricing.Service` preserva o cliente .NET de laboratorio como modo opcional. Com `GrpcLab:Enabled=true`, ele conecta em `GrpcLab:PriceFeedAddress` ou `PRICE_FEED_GRPC_ADDRESS`, chama `StreamPrices`, imprime as atualizacoes e respeita cancelamento por `Ctrl+C`.
 
 Resumo:
 
@@ -372,7 +384,54 @@ Falhas de escrita Kafka sao registradas em log e nao derrubam o feed. A decisao 
 
 ### FASE 16 - Pricing.Service em .NET
 
-Criar `Pricing.Service` para consumir `price-updated` produzido pelo servico Go e manter o ultimo preco conhecido por simbolo, com endpoints `GET /prices/{symbol}` e `GET /prices`.
+Implementada. `Pricing.Service` consome `price-updated` produzido pelo servico Go e mantem o ultimo preco conhecido por simbolo, com endpoints `GET /prices/{symbol}` e `GET /prices`.
+
+Fluxo:
+
+```text
+PriceFeed.Service
+        |
+        | PriceUpdated
+        v
+      Kafka
+   price-updated
+        |
+        v
+KafkaPriceUpdatedConsumer
+        |
+        v
+LatestPriceStore
+        |
+        +-- GET /prices
+        +-- GET /prices/{symbol}
+```
+
+Configuracao principal:
+
+```text
+Kafka:Enabled
+Kafka:BootstrapServers
+Kafka:Topic
+Kafka:ConsumerGroup
+GrpcLab:Enabled
+GrpcLab:PriceFeedAddress
+```
+
+No Docker Compose, `pricing-service` usa `kafka:29092`, consumer group `pricing-service`, topico `price-updated` e porta host `5090`.
+
+O gRPC Server Streaming continua didatico e direto:
+
+```text
+PriceFeed.Service -------- conexao direta --------> Pricing.Service
+```
+
+Quando `Pricing.Service` esta offline, nao ha cliente conectado naquele periodo. Com Kafka, o produtor e o consumidor ficam temporalmente desacoplados:
+
+```text
+PriceFeed.Service -> Kafka -> Pricing.Service
+```
+
+O consumer usa `AutoOffsetReset=Earliest` e commits manuais apos processar a mensagem. Para um consumer group novo, isso permite iniciar pelo inicio do log retido. Para um consumer group existente, a retomada segue os offsets ja commitados pelo Kafka.
 
 ### FASE 17 - Concorrencia e backpressure
 

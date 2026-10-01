@@ -1,44 +1,51 @@
-using Grpc.Core;
-using Grpc.Net.Client;
-using MicroservicesLab.Protos.PriceFeed;
+using MicroservicesLab.PricingService.GrpcLab;
+using MicroservicesLab.PricingService.Infrastructure.Kafka;
+using MicroservicesLab.PricingService.Services;
 
-var priceFeedAddress = Environment.GetEnvironmentVariable("PRICE_FEED_GRPC_ADDRESS")
-    ?? "http://localhost:9090";
+var builder = WebApplication.CreateBuilder(args);
 
-using var shutdown = new CancellationTokenSource();
-Console.CancelKeyPress += (_, eventArgs) =>
+builder.Services.AddOpenApi();
+builder.Services.AddHealthChecks();
+builder.Services.Configure<KafkaOptions>(builder.Configuration.GetSection("Kafka"));
+builder.Services.AddSingleton<LatestPriceStore>();
+
+var grpcLabEnabled = builder.Configuration.GetValue<bool>("GrpcLab:Enabled");
+var kafkaEnabled = builder.Configuration.GetValue<bool?>("Kafka:Enabled") ?? !grpcLabEnabled;
+
+if (grpcLabEnabled)
 {
-    eventArgs.Cancel = true;
-    shutdown.Cancel();
-};
-
-Console.WriteLine($"Pricing.Service gRPC lab client connecting to {priceFeedAddress}");
-
-using var channel = GrpcChannel.ForAddress(priceFeedAddress);
-var client = new PriceFeed.PriceFeedClient(channel);
-
-try
-{
-    using var call = client.StreamPrices(new StreamPricesRequest(), cancellationToken: shutdown.Token);
-
-    await foreach (var update in call.ResponseStream.ReadAllAsync(shutdown.Token))
-    {
-        Console.WriteLine(
-            $"[gRPC] {update.Symbol} {FormatPrice(update.Price)} {update.OccurredAt.ToDateTime():O}");
-    }
+    builder.Services.AddHostedService<GrpcPriceFeedLabClient>();
 }
-catch (OperationCanceledException) when (shutdown.IsCancellationRequested)
+else if (kafkaEnabled)
 {
-    Console.WriteLine("Pricing.Service gRPC lab client stopped.");
-}
-catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled && shutdown.IsCancellationRequested)
-{
-    Console.WriteLine("Pricing.Service gRPC lab client stopped.");
+    builder.Services.AddHostedService<KafkaPriceUpdatedConsumer>();
 }
 
-static string FormatPrice(long cents)
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
 {
-    var units = cents / 100;
-    var remainder = Math.Abs(cents % 100);
-    return $"{units}.{remainder:00}";
+    app.MapOpenApi();
 }
+
+app.MapHealthChecks("/health");
+
+var prices = app.MapGroup("/prices").WithTags("Prices");
+
+prices.MapGet("", (LatestPriceStore store) =>
+{
+    return Results.Ok(store.GetAll());
+})
+.WithName("GetPrices");
+
+prices.MapGet("/{symbol}", (string symbol, LatestPriceStore store) =>
+{
+    var price = store.Get(symbol);
+
+    return price is null ? Results.NotFound() : Results.Ok(price);
+})
+.WithName("GetPriceBySymbol");
+
+app.Run();
+
+public partial class Program;

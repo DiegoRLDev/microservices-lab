@@ -4,7 +4,7 @@ MicroservicesLab e um laboratorio pratico para estudar arquitetura de microservi
 
 O projeto foi construido em fases. A Parte I cobre os fundamentos de microservicos nas Fases 0-12 e esta concluida. A Parte II cobre sistemas distribuidos realtime nas Fases 13-22.
 
-A expansao realtime foi iniciada na FASE 13 com `PriceFeed.Service` em Go. Na FASE 14, o fluxo passou a ser entregue para clientes externos via SSE. Depois dela, um mini-lab didatico adicionou gRPC Server Streaming direto entre `PriceFeed.Service` e `Pricing.Service`. Na FASE 15, o mesmo fluxo passou a ser publicado no Kafka como `PriceUpdated` no topico `price-updated`. A FASE 16 permanece pendente e deve ser iniciada somente por instrucao explicita.
+A expansao realtime foi iniciada na FASE 13 com `PriceFeed.Service` em Go. Na FASE 14, o fluxo passou a ser entregue para clientes externos via SSE. Depois dela, um mini-lab didatico adicionou gRPC Server Streaming direto entre `PriceFeed.Service` e `Pricing.Service`. Na FASE 15, o mesmo fluxo passou a ser publicado no Kafka como `PriceUpdated` no topico `price-updated`. Na FASE 16, `Pricing.Service` passou a consumir esse topico e manter o ultimo preco conhecido por simbolo em memoria.
 
 ## Arquitetura
 
@@ -19,6 +19,8 @@ flowchart TD
     Payment -->|Kafka: payment-approved / payment-rejected| Kafka
     Kafka --> Order
     Kafka --> Audit[Audit.Worker]
+    Kafka -->|Kafka: price-updated| Pricing[Pricing.Service]
+    PriceFeed[PriceFeed.Service] -->|Kafka: price-updated| Kafka
 
     Order --> OrderDb[(PostgreSQL: order_db)]
     Inventory --> InventoryDb[(PostgreSQL: inventory_db)]
@@ -28,6 +30,7 @@ flowchart TD
 ## Tecnologias
 
 - .NET 9 para `Order.Service`, `Inventory.Service`, `Audit.Worker` e `Shared.Contracts`.
+- .NET 9 para `Pricing.Service`, com minimal API, consumer Kafka e estado derivado em memoria.
 - Go para `Payment.Service`.
 - Go para `PriceFeed.Service`, onde a linguagem e usada de forma intencional para concorrencia, streaming, SSE, gRPC Server Streaming e cancelamento com `context.Context`.
 - PostgreSQL com bancos independentes por servico.
@@ -57,6 +60,7 @@ MicroservicesLab/
     Order.Service.Tests/
     Inventory.Service.Tests/
     Audit.Worker.Tests/
+    Pricing.Service.Tests/
   infra/
     kafka/
     postgres/
@@ -151,6 +155,8 @@ Na FASE 7, `Audit.Worker` consome `order-created`, `payment-approved` e `payment
 
 Na FASE 15, `PriceFeed.Service` publica `PriceUpdated` no topico `price-updated` quando `PRICE_KAFKA_ENABLED=true`.
 
+Na FASE 16, `Pricing.Service` consome `price-updated` com o consumer group `pricing-service`, atualiza o ultimo preco conhecido por simbolo e expoe `GET /prices` e `GET /prices/{symbol}`.
+
 ## Roadmap
 
 ### Parte I - Microservices Fundamentals
@@ -179,7 +185,7 @@ Na FASE 15, `PriceFeed.Service` publica `PriceUpdated` no topico `price-updated`
 | 13 | PriceFeed.Service Go | Concluido |
 | 14 | Realtime Delivery - SSE vs WebSocket | Concluido |
 | 15 | Kafka PriceUpdated stream | Concluido |
-| 16 | Pricing.Service .NET | Pendente |
+| 16 | Pricing.Service .NET | Concluido |
 | 17 | Concorrencia e backpressure | Pendente |
 | 18 | Consumer scaling | Pendente |
 | 19 | Multiplas instancias e partitioning | Pendente |
@@ -306,7 +312,7 @@ go run .
 
 Lab: [LAB 15 - Kafka PriceUpdated](docs/labs/LAB-15-kafka-price-updated.md)
 
-Na FASE 16, a expansao podera evoluir para demonstrar interoperabilidade completa Go -> Kafka -> .NET:
+Na FASE 16, a expansao demonstrou interoperabilidade completa Go -> Kafka -> .NET:
 
 ```text
 PriceFeed.Service
@@ -320,6 +326,40 @@ PriceFeed.Service
    Pricing.Service
         .NET
 ```
+
+O `Pricing.Service` transforma o stream de eventos em estado derivado atual:
+
+```text
+price-updated
+      |
+      v
+KafkaPriceUpdatedConsumer
+      |
+      v
+LatestPriceStore
+      |
+      +-- GET /prices
+      +-- GET /prices/{symbol}
+```
+
+Executar localmente com Kafka:
+
+```powershell
+cd .\src\services\Pricing.Service
+dotnet run
+```
+
+Endpoints:
+
+```powershell
+Invoke-RestMethod http://localhost:5000/health
+Invoke-RestMethod http://localhost:5000/prices
+Invoke-RestMethod http://localhost:5000/prices/PETR4
+```
+
+No Docker Compose, a API fica publicada em `http://localhost:5090`.
+
+Lab: [LAB 16 - Pricing.Service Kafka](docs/labs/LAB-16-pricing-service-kafka.md)
 
 Na FASE 15, `symbol` e a Kafka message key para estudar ordenacao por ativo dentro de partitions. Nas Fases 18 e 19, Kubernetes podera ser usado para subir replicas, mas o conceito principal sera a relacao entre consumer groups, partitions, ownership, rebalance e ordering.
 
@@ -859,8 +899,8 @@ docs/guides/TROUBLESHOOTING.md
 
 A Parte I do MicroservicesLab esta concluida.
 
-A Parte II foi iniciada com a FASE 13, ja possui entrega realtime via SSE, mini-lab gRPC e Kafka `price-updated` na FASE 15. O proximo passo possivel e a FASE 16: `Pricing.Service` .NET Kafka Consumer. Ela nao deve ser iniciada automaticamente. Use uma instrucao explicita quando quiser avancar:
+A Parte II foi iniciada com a FASE 13, ja possui entrega realtime via SSE, mini-lab gRPC, Kafka `price-updated` na FASE 15 e `Pricing.Service` consumindo o stream na FASE 16. O proximo passo possivel e a FASE 17: concorrencia e backpressure. Ela nao deve ser iniciada automaticamente. Use uma instrucao explicita quando quiser avancar:
 
 ```text
-Avance para a FASE 16.
+Avance para a FASE 17.
 ```

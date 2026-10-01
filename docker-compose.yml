@@ -175,6 +175,33 @@ services:
       kafka-init:
         condition: service_completed_successfully
 
+  pricing-service:
+    build:
+      context: .
+      dockerfile: src/services/Pricing.Service/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      Kafka__Enabled: "true"
+      Kafka__BootstrapServers: kafka:29092
+      Kafka__Topic: price-updated
+      Kafka__ConsumerGroup: pricing-service
+      GrpcLab__Enabled: "false"
+    ports:
+      - "5090:8080"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+      pricefeed-service:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8080'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
   audit-worker:
     build:
       context: .
