@@ -217,7 +217,7 @@ Na FASE 16, `Pricing.Service` consome `price-updated` com o consumer group `pric
 | Fase | Descricao | Status |
 | ---- | --------- | ------ |
 | 23 | Angular, estrutura inicial e Docker Compose | Concluido |
-| 24 | Dashboard e navegacao | Pendente |
+| 24 | Dashboard e navegacao | Concluido |
 | 25 | Produtos e estoque | Pendente |
 | 26 | Pedidos e pagamentos | Pendente |
 | 27 | Precos realtime (SSE) | Pendente |
@@ -226,7 +226,16 @@ Na FASE 16, `Pricing.Service` consome `price-updated` com o consumer group `pric
 
 ## Parte III: Aplicacao Front-end
 
-A FASE 23 adiciona `MicroservicesLab.App`, uma aplicacao Angular standalone em `src/frontend/MicroservicesLab.App`. Ela prepara navegacao, configuracao de APIs e execucao em Docker Compose, sem implementar ainda as telas funcionais das Fases 24-29.
+A FASE 23 adiciona `MicroservicesLab.App`, uma aplicacao Angular standalone em `src/frontend/MicroservicesLab.App`. Ela prepara navegacao, configuracao de APIs e execucao em Docker Compose.
+
+Na FASE 24, a rota `/dashboard` passa a exibir indicadores reais consumindo as APIs existentes:
+
+- total de produtos via `/api/inventory/products`;
+- total de pedidos via `/api/order/orders`;
+- total de simbolos com preco via `/api/pricing/prices`;
+- status dos servicos HTTP via endpoints `/health`.
+
+As telas de produtos, pedidos, precos, auditoria e observabilidade continuam como placeholders para as proximas fases.
 
 Portas usadas pelo front-end:
 

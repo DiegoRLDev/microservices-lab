@@ -1,0 +1,177 @@
+.dashboard-page {
+  display: grid;
+  gap: 24px;
+  max-width: 1180px;
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.dashboard-header span,
+.summary-card span {
+  color: var(--color-primary-strong);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.dashboard-header h1 {
+  margin: 8px 0;
+  font-size: 2rem;
+  line-height: 1.15;
+}
+
+.dashboard-header p,
+.summary-card p,
+.section-heading p,
+.service-card p {
+  margin: 0;
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+
+.dashboard-header p {
+  max-width: 720px;
+}
+
+button {
+  min-width: 116px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--color-primary);
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 11px 16px;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.overview-grid,
+.service-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.summary-card,
+.status-section,
+.service-card {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.summary-card {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-height: 150px;
+  padding: 22px;
+}
+
+.summary-card strong {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.summary-card strong.muted {
+  color: var(--color-muted);
+  font-size: 1.25rem;
+}
+
+.summary-card strong.unavailable {
+  color: #b42318;
+  font-size: 1.25rem;
+}
+
+.service-summary {
+  background: #f7fbff;
+}
+
+.status-section {
+  display: grid;
+  gap: 20px;
+  padding: 22px;
+}
+
+.section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.section-heading h2 {
+  margin: 0 0 6px;
+  font-size: 1.25rem;
+}
+
+.section-heading > span {
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.service-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 112px;
+  padding: 18px;
+}
+
+.service-card h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+}
+
+.service-card p {
+  overflow-wrap: anywhere;
+}
+
+.status-pill {
+  border-radius: 999px;
+  background: #eef2f6;
+  color: var(--color-muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+  padding: 7px 10px;
+  white-space: nowrap;
+}
+
+.service-card.online .status-pill {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.service-card.offline .status-pill {
+  background: #fee4e2;
+  color: #b42318;
+}
+
+@media (max-width: 700px) {
+  .dashboard-header,
+  .section-heading,
+  .service-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  button {
+    width: 100%;
+  }
+
+  .section-heading > span {
+    white-space: normal;
+  }
+}

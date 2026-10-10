@@ -48,7 +48,7 @@ A Parte III adiciona uma aplicacao Angular para interagir com o laboratorio. A i
 | Fase | Descricao | Status |
 | ---- | --------- | ------ |
 | 23 | Angular, estrutura inicial e Docker Compose | Concluido |
-| 24 | Dashboard e navegacao | Pendente |
+| 24 | Dashboard e navegacao | Concluido |
 | 25 | Produtos e estoque | Pendente |
 | 26 | Pedidos e pagamentos | Pendente |
 | 27 | Precos realtime (SSE) | Pendente |
@@ -72,7 +72,7 @@ O front-end deve consumir as APIs existentes sem introduzir API Gateway, BFF, au
 | Fase | Nome | Objetivo principal | Status |
 | ---- | ---- | ------------------ | ------ |
 | 23 | Angular, estrutura inicial e Docker Compose | Criar a base Angular, rotas iniciais, configuracao de APIs e integracao com Docker Compose. | Concluido |
-| 24 | Dashboard e navegacao | Evoluir a tela inicial e a navegacao com dados reais basicos do laboratorio. | Pendente |
+| 24 | Dashboard e navegacao | Evoluir a tela inicial e a navegacao com dados reais basicos do laboratorio. | Concluido |
 | 25 | Produtos e estoque | Consumir as APIs de produtos, disponibilidade e reserva quando fizer sentido para o lab. | Pendente |
 | 26 | Pedidos e pagamentos | Criar pedidos e acompanhar a evolucao assincrona do status. | Pendente |
 | 27 | Precos realtime (SSE) | Consumir o stream SSE do `PriceFeed.Service` e/ou o estado atual do `Pricing.Service`. | Pendente |

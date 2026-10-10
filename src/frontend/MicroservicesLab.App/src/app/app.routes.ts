@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { DashboardPageComponent } from './pages/dashboard/dashboard-page.component';
 import { PlaceholderPageComponent } from './pages/placeholder/placeholder-page.component';
 
 export const routes: Routes = [
@@ -9,12 +10,7 @@ export const routes: Routes = [
   },
   {
     path: 'dashboard',
-    component: PlaceholderPageComponent,
-    data: {
-      title: 'Dashboard',
-      description: 'Visao inicial do laboratorio e status geral dos servicos.',
-      phase: 'Fase 24'
-    }
+    component: DashboardPageComponent
   },
   {
     path: 'produtos',

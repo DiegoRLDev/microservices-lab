@@ -46,7 +46,7 @@ O laboratorio esta organizado em duas partes:
 | Fase | Descricao | Status |
 | ---- | --------- | ------ |
 | 23 | Angular, estrutura inicial e Docker Compose | Concluido |
-| 24 | Dashboard e navegacao | Pendente |
+| 24 | Dashboard e navegacao | Concluido |
 | 25 | Produtos e estoque | Pendente |
 | 26 | Pedidos e pagamentos | Pendente |
 | 27 | Precos realtime (SSE) | Pendente |
@@ -1155,3 +1155,44 @@ Resultado da validacao:
 - `dotnet test .\MicroservicesLab.sln`: aprovado, 27/27 testes;
 - `go test ./...` em `PriceFeed.Service`: aprovado;
 - `go test ./...` em `Payment.Service`: aprovado.
+
+## FASE 24 - Dashboard e navegacao
+
+Status: Concluido
+
+Criado/evoluido:
+
+- dashboard funcional na rota `/dashboard`;
+- cards com total de produtos, pedidos e simbolos com preco;
+- consumo real de `GET /api/inventory/products`, `GET /api/order/orders` e `GET /api/pricing/prices`;
+- status dos servicos HTTP acessiveis pelo front-end usando endpoints `/health`;
+- estados independentes de carregamento, erro, indisponibilidade e vazio;
+- botao manual para atualizar indicadores;
+- servicos Angular especificos para Inventory, Order e Pricing;
+- navegacao da FASE 23 preservada, com destaque de rota ativa;
+- paginas de produtos, pedidos, precos, auditoria e observabilidade preservadas como placeholders.
+
+Decisoes didaticas:
+
+- nao foi implementado polling automatico;
+- nao foi implementado SSE nesta fase;
+- nao foram criados API Gateway, BFF, autenticacao ou novos endpoints backend;
+- quando uma API falha, o dashboard exibe `Indisponivel` e mantem os demais indicadores funcionando.
+
+Validacao:
+
+```powershell
+cd .\src\frontend\MicroservicesLab.App
+pnpm build
+pnpm start
+Invoke-WebRequest -UseBasicParsing http://127.0.0.1:4200/
+Invoke-WebRequest -UseBasicParsing http://127.0.0.1:4200/produtos
+docker compose config --quiet
+docker compose up -d --build
+dotnet build .\MicroservicesLab.sln
+dotnet test .\MicroservicesLab.sln --no-build
+cd .\src\services\PriceFeed.Service
+go test ./...
+cd ..\Payment.Service
+go test ./...
+```
