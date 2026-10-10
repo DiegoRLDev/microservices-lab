@@ -1,0 +1,186 @@
+<section class="products-page">
+  <header class="page-header">
+    <div>
+      <span>Fase 25</span>
+      <h1>Produtos e estoque</h1>
+      <p>
+        Cadastro, consulta e verificacao de disponibilidade usando diretamente
+        as APIs do Inventory.Service.
+      </p>
+    </div>
+
+    <button type="button" class="primary-action" (click)="loadProducts()" [disabled]="productsStatus() === 'loading'">
+      {{ productsStatus() === 'loading' ? 'Atualizando...' : 'Atualizar lista' }}
+    </button>
+  </header>
+
+  <div class="content-grid">
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <h2>Cadastrar produto</h2>
+          <p>Informe os dados iniciais do produto no estoque.</p>
+        </div>
+      </div>
+
+      <form class="product-form" [formGroup]="productForm" (ngSubmit)="createProduct()">
+        <label>
+          Nome
+          <input type="text" formControlName="name" placeholder="Notebook de laboratorio">
+          @if (fieldHasError('name')) {
+            <small>Nome e obrigatorio.</small>
+          }
+        </label>
+
+        <div class="form-row">
+          <label>
+            Preco
+            <input type="number" formControlName="price" min="0" step="0.01">
+            @if (fieldHasError('price')) {
+              <small>Informe um preco valido.</small>
+            }
+          </label>
+
+          <label>
+            Quantidade inicial
+            <input type="number" formControlName="availableQuantity" min="0" step="1">
+            @if (fieldHasError('availableQuantity')) {
+              <small>A quantidade nao pode ser negativa.</small>
+            }
+          </label>
+        </div>
+
+        @if (createMessage()) {
+          <p class="feedback success">{{ createMessage() }}</p>
+        }
+
+        @if (createError()) {
+          <p class="feedback error">{{ createError() }}</p>
+        }
+
+        <button type="submit" class="primary-action" [disabled]="createStatus() === 'loading'">
+          {{ createStatus() === 'loading' ? 'Cadastrando...' : 'Cadastrar produto' }}
+        </button>
+      </form>
+    </section>
+
+    <section class="panel details-panel">
+      <div class="section-heading">
+        <div>
+          <h2>Detalhes e disponibilidade</h2>
+          <p>Selecione um produto da lista para consultar dados e disponibilidade.</p>
+        </div>
+      </div>
+
+      @if (detailsStatus() === 'loading') {
+        <p class="state-message">Carregando detalhes...</p>
+      } @else if (detailsStatus() === 'error') {
+        <p class="feedback error">{{ detailsError() }}</p>
+      } @else if (selectedProduct()) {
+        <div class="product-details">
+          <dl>
+            <div>
+              <dt>Identificador</dt>
+              <dd>{{ selectedProduct()?.id }}</dd>
+            </div>
+            <div>
+              <dt>Nome</dt>
+              <dd>{{ selectedProduct()?.name }}</dd>
+            </div>
+            <div>
+              <dt>Preco</dt>
+              <dd>{{ selectedProduct()?.price | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</dd>
+            </div>
+            <div>
+              <dt>Quantidade disponivel</dt>
+              <dd>{{ selectedProduct()?.availableQuantity }}</dd>
+            </div>
+          </dl>
+
+          <form class="availability-form" [formGroup]="availabilityForm" (ngSubmit)="checkAvailability()">
+            <label>
+              Quantidade desejada
+              <input type="number" formControlName="quantity" min="1" step="1">
+              @if (availabilityHasError()) {
+                <small>Informe uma quantidade maior que zero.</small>
+              }
+            </label>
+
+            <button type="submit" class="secondary-action" [disabled]="availability().status === 'loading'">
+              {{ availability().status === 'loading' ? 'Consultando...' : 'Consultar disponibilidade' }}
+            </button>
+          </form>
+
+          @if (availability().status === 'success' && availability().result) {
+            <div class="availability-result" [class.available]="availability().result?.isAvailable" [class.unavailable]="!availability().result?.isAvailable">
+              <strong>
+                {{ availability().result?.isAvailable ? 'Disponivel' : 'Indisponivel' }}
+              </strong>
+              <p>
+                Consulta de {{ availability().result?.requestedQuantity }} unidade(s).
+                Estoque atual: {{ availability().result?.availableQuantity }}.
+              </p>
+            </div>
+          } @else if (availability().status === 'error') {
+            <p class="feedback error">{{ availability().error }}</p>
+          }
+        </div>
+      } @else {
+        <p class="state-message">Nenhum produto selecionado.</p>
+      }
+    </section>
+  </div>
+
+  <section class="panel products-panel">
+    <div class="section-heading">
+      <div>
+        <h2>Produtos cadastrados</h2>
+        <p>Dados reais retornados pelo Inventory.Service.</p>
+      </div>
+      <span>{{ products().length }} item(ns)</span>
+    </div>
+
+    @if (productsStatus() === 'loading') {
+      <p class="state-message">Carregando produtos...</p>
+    } @else if (productsStatus() === 'error') {
+      <p class="feedback error">{{ productsError() }}</p>
+    } @else if (!hasProducts()) {
+      <p class="state-message">Nenhum produto cadastrado.</p>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Identificador</th>
+              <th>Nome</th>
+              <th>Preco</th>
+              <th>Quantidade</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (product of products(); track product.id) {
+              <tr [class.selected]="selectedProduct()?.id === product.id">
+                <td class="mono">{{ product.id }}</td>
+                <td>{{ product.name }}</td>
+                <td>{{ product.price | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+                <td>{{ product.availableQuantity }}</td>
+                <td>
+                  <span class="stock-pill" [class.available]="product.availableQuantity > 0" [class.unavailable]="product.availableQuantity === 0">
+                    {{ product.availableQuantity > 0 ? 'Disponivel' : 'Sem estoque' }}
+                  </span>
+                </td>
+                <td>
+                  <button type="button" class="link-action" (click)="selectProduct(product.id)">
+                    Detalhes
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</section>

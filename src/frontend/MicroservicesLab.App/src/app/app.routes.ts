@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { DashboardPageComponent } from './pages/dashboard/dashboard-page.component';
 import { PlaceholderPageComponent } from './pages/placeholder/placeholder-page.component';
+import { ProductsPageComponent } from './pages/products/products-page.component';
 
 export const routes: Routes = [
   {
@@ -14,12 +15,7 @@ export const routes: Routes = [
   },
   {
     path: 'produtos',
-    component: PlaceholderPageComponent,
-    data: {
-      title: 'Produtos e estoque',
-      description: 'Area preparada para cadastro, consulta e disponibilidade de produtos.',
-      phase: 'Fase 25'
-    }
+    component: ProductsPageComponent
   },
   {
     path: 'pedidos',

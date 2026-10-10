@@ -218,7 +218,7 @@ Na FASE 16, `Pricing.Service` consome `price-updated` com o consumer group `pric
 | ---- | --------- | ------ |
 | 23 | Angular, estrutura inicial e Docker Compose | Concluido |
 | 24 | Dashboard e navegacao | Concluido |
-| 25 | Produtos e estoque | Pendente |
+| 25 | Produtos e estoque | Concluido |
 | 26 | Pedidos e pagamentos | Pendente |
 | 27 | Precos realtime (SSE) | Pendente |
 | 28 | Auditoria e observabilidade | Pendente |
@@ -235,7 +235,16 @@ Na FASE 24, a rota `/dashboard` passa a exibir indicadores reais consumindo as A
 - total de simbolos com preco via `/api/pricing/prices`;
 - status dos servicos HTTP via endpoints `/health`.
 
-As telas de produtos, pedidos, precos, auditoria e observabilidade continuam como placeholders para as proximas fases.
+Na FASE 25, a rota `/produtos` passa a consumir o `Inventory.Service` por meio do proxy do front-end:
+
+- listagem real de produtos via `GET /api/inventory/products`;
+- cadastro via `POST /api/inventory/products`;
+- consulta de detalhes via `GET /api/inventory/products/{id}`;
+- verificacao de disponibilidade via `POST /api/inventory/products/{id}/availability`.
+
+A tela inclui estados de carregamento, vazio, erro, atualizacao manual e layout responsivo. Edicao, exclusao e reserva manual de estoque nao foram implementadas nesta fase.
+
+As telas de pedidos, precos, auditoria e observabilidade continuam como placeholders para as proximas fases.
 
 Portas usadas pelo front-end:
 

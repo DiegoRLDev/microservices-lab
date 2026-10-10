@@ -47,7 +47,7 @@ O laboratorio esta organizado em duas partes:
 | ---- | --------- | ------ |
 | 23 | Angular, estrutura inicial e Docker Compose | Concluido |
 | 24 | Dashboard e navegacao | Concluido |
-| 25 | Produtos e estoque | Pendente |
+| 25 | Produtos e estoque | Concluido |
 | 26 | Pedidos e pagamentos | Pendente |
 | 27 | Precos realtime (SSE) | Pendente |
 | 28 | Auditoria e observabilidade | Pendente |
@@ -1196,3 +1196,56 @@ go test ./...
 cd ..\Payment.Service
 go test ./...
 ```
+
+## FASE 25 - Produtos e estoque
+
+Status: Concluido
+
+Criado/evoluido:
+
+- tela funcional na rota `/produtos`;
+- listagem real de produtos consumindo `GET /api/inventory/products`;
+- cadastro de produtos consumindo `POST /api/inventory/products`;
+- painel de detalhes consumindo `GET /api/inventory/products/{id}`;
+- consulta de disponibilidade consumindo `POST /api/inventory/products/{id}/availability`;
+- formularios reativos com validacao de nome, preco e quantidade;
+- estados de loading, vazio, sucesso e erro;
+- atualizacao manual da listagem;
+- layout responsivo integrado a identidade visual da Parte III;
+- suporte ao locale `pt-BR` para exibicao monetaria em BRL.
+
+Decisoes didaticas:
+
+- a tela consome somente APIs existentes do `Inventory.Service`;
+- nao foram implementadas edicao, exclusao ou reserva manual de estoque;
+- a reserva de estoque continua reservada para os fluxos de pedidos das proximas fases;
+- nao foram criados API Gateway, BFF, autenticacao ou novos endpoints backend.
+
+Validacao:
+
+```powershell
+cd .\src\frontend\MicroservicesLab.App
+pnpm build
+docker compose config --quiet
+docker compose up -d --build frontend
+dotnet build .\MicroservicesLab.sln
+dotnet test .\MicroservicesLab.sln --no-build
+cd .\src\services\PriceFeed.Service
+go test ./...
+cd ..\Payment.Service
+go test ./...
+```
+
+Resultado da validacao:
+
+- build Angular local: aprovado com `pnpm build`;
+- `docker compose config --quiet`: aprovado;
+- `docker compose up -d --build frontend`: aprovado, imagem `microservices-lab-frontend:latest` reconstruida e container iniciado;
+- `dotnet build .\MicroservicesLab.sln`: aprovado, 0 warnings, 0 errors;
+- `dotnet test .\MicroservicesLab.sln --no-build`: aprovado, 27/27 testes;
+- `go test ./...` em `PriceFeed.Service`: aprovado;
+- `go test ./...` em `Payment.Service`: aprovado;
+- smoke via Docker/Nginx: `GET http://127.0.0.1:4200/produtos` retornou HTTP 200;
+- produto real criado via proxy do front-end: `7147eab7-a183-489c-8b46-934e9bbe4ad0`, `Produto Frontend Fase 25`, preco `123.45`, estoque `7`;
+- detalhes do produto consultados com sucesso;
+- disponibilidade para quantidade `3` retornou `isAvailable=true` e preservou `availableQuantity=7`.
