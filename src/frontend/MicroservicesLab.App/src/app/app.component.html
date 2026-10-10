@@ -1,0 +1,26 @@
+<div class="app-shell">
+  <aside class="sidebar" aria-label="Navegacao principal">
+    <a class="brand" routerLink="/dashboard" aria-label="MicroservicesLab">
+      <span class="brand-mark">ML</span>
+      <span>
+        <strong>MicroservicesLab</strong>
+        <small>Painel de laboratorio</small>
+      </span>
+    </a>
+
+    <nav class="nav-list">
+      @for (item of navItems; track item.route) {
+        <a
+          [routerLink]="item.route"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }">
+          {{ item.label }}
+        </a>
+      }
+    </nav>
+  </aside>
+
+  <main class="main-content">
+    <router-outlet />
+  </main>
+</div>

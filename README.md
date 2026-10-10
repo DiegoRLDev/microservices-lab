@@ -2,7 +2,7 @@
 
 MicroservicesLab e um laboratorio pratico para estudar arquitetura de microservicos usando .NET, Go, PostgreSQL, Kafka, gRPC, Docker e Kubernetes.
 
-O projeto foi construido em fases. A Parte I cobre os fundamentos de microservicos nas Fases 0-12 e esta concluida. A Parte II cobre sistemas distribuidos realtime nas Fases 13-22.
+O projeto foi construido em fases. A Parte I cobre os fundamentos de microservicos nas Fases 0-12 e esta concluida. A Parte II cobre sistemas distribuidos realtime nas Fases 13-22. A Parte III inicia a aplicacao front-end que funciona como painel de laboratorio para interagir com os servicos.
 
 A expansao realtime foi iniciada na FASE 13 com `PriceFeed.Service` em Go. Na FASE 14, o fluxo passou a ser entregue para clientes externos via SSE. Depois dela, um mini-lab didatico adicionou gRPC Server Streaming direto entre `PriceFeed.Service` e `Pricing.Service`. Na FASE 15, o mesmo fluxo passou a ser publicado no Kafka como `PriceUpdated` no topico `price-updated`. Na FASE 16, `Pricing.Service` passou a consumir esse topico e manter o ultimo preco conhecido por simbolo em memoria.
 
@@ -31,6 +31,7 @@ flowchart TD
 
 - .NET 9 para `Order.Service`, `Inventory.Service`, `Audit.Worker` e `Shared.Contracts`.
 - .NET 9 para `Pricing.Service`, com minimal API, consumer Kafka e estado derivado em memoria.
+- Angular para `MicroservicesLab.App`, a aplicacao front-end do laboratorio.
 - Go para `Payment.Service`.
 - Go para `PriceFeed.Service`, onde a linguagem e usada de forma intencional para concorrencia, streaming, SSE, gRPC Server Streaming e cancelamento com `context.Context`.
 - PostgreSQL com bancos independentes por servico.
@@ -45,6 +46,8 @@ flowchart TD
 ```text
 MicroservicesLab/
   src/
+    frontend/
+      MicroservicesLab.App/
     services/
       Order.Service/
       Inventory.Service/
@@ -84,6 +87,22 @@ Docker Compose completo:
 docker compose up -d --build
 docker compose ps
 ```
+
+Aplicacao front-end no Docker Compose:
+
+```text
+http://localhost:4200
+```
+
+Execucao local do front-end para desenvolvimento:
+
+```powershell
+cd .\src\frontend\MicroservicesLab.App
+pnpm install
+pnpm start
+```
+
+O `pnpm start` usa `proxy.conf.json` para encaminhar `/api/order`, `/api/inventory`, `/api/pricefeed` e `/api/pricing` para as portas locais dos servicos, evitando CORS durante o desenvolvimento.
 
 Kubernetes local:
 
@@ -192,6 +211,33 @@ Na FASE 16, `Pricing.Service` consome `price-updated` com o consumer group `pric
 | 20 | Ingester/Processor | Pendente |
 | 21 | Realtime observability | Pendente |
 | 22 | Load e chaos testing | Pendente |
+
+### Parte III - Application / Front-end
+
+| Fase | Descricao | Status |
+| ---- | --------- | ------ |
+| 23 | Angular, estrutura inicial e Docker Compose | Concluido |
+| 24 | Dashboard e navegacao | Pendente |
+| 25 | Produtos e estoque | Pendente |
+| 26 | Pedidos e pagamentos | Pendente |
+| 27 | Precos realtime (SSE) | Pendente |
+| 28 | Auditoria e observabilidade | Pendente |
+| 29 | Integracao e validacao final | Pendente |
+
+## Parte III: Aplicacao Front-end
+
+A FASE 23 adiciona `MicroservicesLab.App`, uma aplicacao Angular standalone em `src/frontend/MicroservicesLab.App`. Ela prepara navegacao, configuracao de APIs e execucao em Docker Compose, sem implementar ainda as telas funcionais das Fases 24-29.
+
+Portas usadas pelo front-end:
+
+```text
+Angular dev server: http://localhost:4200
+Docker Compose:     http://localhost:4200
+Order API:          /api/order      -> Order.Service
+Inventory API:      /api/inventory  -> Inventory.Service
+PriceFeed API:      /api/pricefeed  -> PriceFeed.Service
+Pricing API:        /api/pricing    -> Pricing.Service
+```
 
 ## Parte II: Realtime Distributed Systems
 

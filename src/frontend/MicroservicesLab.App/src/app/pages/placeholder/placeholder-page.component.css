@@ -1,0 +1,75 @@
+.page {
+  display: grid;
+  gap: 24px;
+  max-width: 1120px;
+}
+
+.page-header {
+  display: grid;
+  gap: 8px;
+}
+
+.page-header span {
+  color: var(--color-primary-strong);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 2rem;
+  line-height: 1.15;
+}
+
+.page-header p {
+  max-width: 720px;
+  margin: 0;
+  color: var(--color-muted);
+  line-height: 1.6;
+}
+
+.status-panel {
+  display: grid;
+  gap: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+  padding: 24px;
+}
+
+.status-panel h2 {
+  margin: 0 0 8px;
+  font-size: 1.2rem;
+}
+
+.status-panel p {
+  margin: 0;
+  color: var(--color-muted);
+  line-height: 1.6;
+}
+
+dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+dl div {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+dt {
+  font-weight: 700;
+}
+
+dd {
+  margin: 6px 0 0;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}

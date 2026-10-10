@@ -4,6 +4,7 @@ O laboratorio esta organizado em duas partes:
 
 - Parte I - Microservices Fundamentals: Fases 0-12.
 - Parte II - Realtime Distributed Systems: Fases 13-22, iniciada na FASE 13 depois do fechamento da Parte I.
+- Parte III - Application / Front-end: Fases 23-29, iniciada na FASE 23.
 
 ## Parte I - Microservices Fundamentals
 
@@ -39,6 +40,18 @@ O laboratorio esta organizado em duas partes:
 | 20 | Ingester/Processor | Pendente |
 | 21 | Realtime observability | Pendente |
 | 22 | Load e chaos testing | Pendente |
+
+## Parte III - Application / Front-end
+
+| Fase | Descricao | Status |
+| ---- | --------- | ------ |
+| 23 | Angular, estrutura inicial e Docker Compose | Concluido |
+| 24 | Dashboard e navegacao | Pendente |
+| 25 | Produtos e estoque | Pendente |
+| 26 | Pedidos e pagamentos | Pendente |
+| 27 | Precos realtime (SSE) | Pendente |
+| 28 | Auditoria e observabilidade | Pendente |
+| 29 | Integracao e validacao final | Pendente |
 
 ## Regra de execucao
 
@@ -1087,3 +1100,58 @@ Resultado da validacao:
 - `GET /prices` retornou estado derivado real, incluindo `PRIO3`;
 - `GET /prices/PRIO3` retornou `{"symbol":"PRIO3","price":5279,"occurredAt":"2026-10-01T10:33:27.9110091-03:00"}`;
 - interrupcao e reinicio do `Pricing.Service` foram testados mantendo `PriceFeed.Service` produzindo; apos reiniciar, o consumer group voltou a consumir e a API exibiu estado derivado novamente.
+
+## FASE 23 - Angular, estrutura inicial e Docker Compose
+
+Status: Concluido
+
+Criado:
+
+- aplicacao Angular em `src/frontend/MicroservicesLab.App`;
+- componentes standalone com Angular Router;
+- navegacao inicial para dashboard, produtos, pedidos, precos, auditoria e observabilidade;
+- pagina placeholder simples informando que o laboratorio esta disponivel;
+- configuracao central de endpoints em `src/environments`;
+- `proxy.conf.json` para desenvolvimento local sem CORS;
+- `Dockerfile` multi-stage usando build Node e Nginx;
+- `nginx.conf` com fallback de SPA e proxy para os servicos internos do Compose;
+- servico `frontend` no `docker-compose.yml`, publicado em `http://localhost:4200`.
+
+Decisoes didaticas:
+
+- a FASE 23 prepara a base da aplicacao sem implementar funcionalidades das telas futuras;
+- nao foi criado API Gateway ou BFF;
+- as rotas `/api/order`, `/api/inventory`, `/api/pricefeed` e `/api/pricing` isolam o front-end das portas reais dos servicos;
+- no desenvolvimento local, o proxy do Angular aponta para `localhost:5074`, `localhost:5276`, `localhost:5080` e `localhost:5090`;
+- no Docker, o Nginx encaminha para `order-service:8080`, `inventory-service:8080`, `pricefeed-service:8080` e `pricing-service:8080`.
+
+Validacao:
+
+```powershell
+node --version
+pnpm --version
+pnpm install --frozen-lockfile
+pnpm build
+docker compose config --quiet
+docker compose build frontend
+dotnet build .\MicroservicesLab.sln
+dotnet test .\MicroservicesLab.sln
+cd .\src\services\PriceFeed.Service
+go test ./...
+cd ..\Payment.Service
+go test ./...
+```
+
+Resultado da validacao:
+
+- `node --version`: disponivel (`v24.19.0`);
+- `pnpm --version`: aprovado (`11.25.0`);
+- `pnpm install --frozen-lockfile`: aprovado;
+- build Angular local: aprovado com `pnpm build`;
+- smoke local: `http://127.0.0.1:4200/` e `http://127.0.0.1:4200/produtos` retornaram HTTP 200;
+- `docker compose config --quiet`: aprovado;
+- `docker compose build frontend`: aprovado, imagem `microservices-lab-frontend:latest` criada;
+- `dotnet build .\MicroservicesLab.sln`: aprovado, 0 warnings, 0 errors;
+- `dotnet test .\MicroservicesLab.sln`: aprovado, 27/27 testes;
+- `go test ./...` em `PriceFeed.Service`: aprovado;
+- `go test ./...` em `Payment.Service`: aprovado.

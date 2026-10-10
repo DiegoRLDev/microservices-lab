@@ -9,6 +9,11 @@ TestResults/
 coverage.out
 coverage/
 
+# Front-end
+node_modules/
+dist/
+.angular/
+
 # User/local files
 *.user
 *.suo
@@ -21,6 +26,8 @@ coverage/
 .env.*
 
 # Logs and local data
+.cache/
+.pnpm-store/
 logs/
 *.log
 *.db

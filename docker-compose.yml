@@ -202,6 +202,22 @@ services:
       timeout: 5s
       retries: 12
 
+  frontend:
+    build:
+      context: .
+      dockerfile: src/frontend/MicroservicesLab.App/Dockerfile
+    ports:
+      - "4200:80"
+    depends_on:
+      order-service:
+        condition: service_healthy
+      inventory-service:
+        condition: service_healthy
+      pricefeed-service:
+        condition: service_started
+      pricing-service:
+        condition: service_healthy
+
   audit-worker:
     build:
       context: .

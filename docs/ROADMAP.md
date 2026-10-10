@@ -41,6 +41,44 @@ Entre a FASE 14 e a FASE 15 existe um mini-lab concluido de gRPC Server Streamin
 | 21 | Realtime observability | Pendente |
 | 22 | Load e chaos testing | Pendente |
 
+## Parte III - Application / Front-end
+
+A Parte III adiciona uma aplicacao Angular para interagir com o laboratorio. A interface deve ser um painel tecnico e demonstravel, nao um ERP ou produto comercial.
+
+| Fase | Descricao | Status |
+| ---- | --------- | ------ |
+| 23 | Angular, estrutura inicial e Docker Compose | Concluido |
+| 24 | Dashboard e navegacao | Pendente |
+| 25 | Produtos e estoque | Pendente |
+| 26 | Pedidos e pagamentos | Pendente |
+| 27 | Precos realtime (SSE) | Pendente |
+| 28 | Auditoria e observabilidade | Pendente |
+| 29 | Integracao e validacao final | Pendente |
+
+## Objetivo da Parte III
+
+Construir uma aplicacao front-end simples e funcional para operar os fluxos ja existentes do MicroservicesLab:
+
+- visualizar o estado geral do laboratorio;
+- cadastrar e consultar produtos;
+- criar pedidos e acompanhar pagamentos assincronos;
+- observar precos realtime via SSE;
+- expor auditoria e observabilidade de forma didatica quando as APIs necessarias existirem.
+
+O front-end deve consumir as APIs existentes sem introduzir API Gateway, BFF, autenticacao ou novas regras de negocio antes de haver necessidade concreta.
+
+## Planejamento das Fases 23-29
+
+| Fase | Nome | Objetivo principal | Status |
+| ---- | ---- | ------------------ | ------ |
+| 23 | Angular, estrutura inicial e Docker Compose | Criar a base Angular, rotas iniciais, configuracao de APIs e integracao com Docker Compose. | Concluido |
+| 24 | Dashboard e navegacao | Evoluir a tela inicial e a navegacao com dados reais basicos do laboratorio. | Pendente |
+| 25 | Produtos e estoque | Consumir as APIs de produtos, disponibilidade e reserva quando fizer sentido para o lab. | Pendente |
+| 26 | Pedidos e pagamentos | Criar pedidos e acompanhar a evolucao assincrona do status. | Pendente |
+| 27 | Precos realtime (SSE) | Consumir o stream SSE do `PriceFeed.Service` e/ou o estado atual do `Pricing.Service`. | Pendente |
+| 28 | Auditoria e observabilidade | Expor auditoria e links/leituras operacionais sem substituir Jaeger, Prometheus ou Grafana. | Pendente |
+| 29 | Integracao e validacao final | Validar o fluxo completo da aplicacao com os microsservicos. | Pendente |
+
 ## Objetivo da Parte II
 
 Estudar sistemas distribuidos realtime com foco em fluxo continuo de dados, concorrencia, throughput, backpressure, processamento distribuido, consumer lag, particionamento, escalabilidade e comportamento sob carga/falhas.

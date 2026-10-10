@@ -6,6 +6,7 @@ O laboratorio agora esta organizado em duas partes:
 
 - Parte I - Microservices Fundamentals: Fases 0-12.
 - Parte II - Realtime Distributed Systems: Fases 13-22, iniciada depois da conclusao da Parte I.
+- Parte III - Application / Front-end: Fases 23-29, iniciada com uma aplicacao Angular para operar o laboratorio.
 
 ## Servicos
 
@@ -80,6 +81,39 @@ GET /prices/{symbol}
 ```
 
 O mini-lab gRPC continua preservado por configuracao (`GrpcLab:Enabled=true`). Nesse modo, o servico abre uma chamada `StreamPrices` contra o `PriceFeed.Service` e imprime o fluxo recebido, mas esse caminho nao alimenta o estado REST da FASE 16.
+
+### MicroservicesLab.App
+
+Aplicacao Angular criada na FASE 23 para servir como painel de laboratorio. Ela nao concentra regras de negocio e nao substitui os contratos dos microsservicos.
+
+A aplicacao usa componentes standalone, Angular Router e configuracao simples de endpoints. As rotas iniciais preparam as areas futuras:
+
+- dashboard;
+- produtos e estoque;
+- pedidos e pagamentos;
+- precos realtime;
+- auditoria;
+- observabilidade.
+
+Durante desenvolvimento local, `proxy.conf.json` encaminha as chamadas relativas para as portas publicadas no host:
+
+```text
+/api/order      -> http://localhost:5074
+/api/inventory  -> http://localhost:5276
+/api/pricefeed  -> http://localhost:5080
+/api/pricing    -> http://localhost:5090
+```
+
+No Docker Compose, o front-end e servido por Nginx em `http://localhost:4200`, com proxy interno para os nomes dos servicos:
+
+```text
+/api/order      -> http://order-service:8080
+/api/inventory  -> http://inventory-service:8080
+/api/pricefeed  -> http://pricefeed-service:8080
+/api/pricing    -> http://pricing-service:8080
+```
+
+Essa escolha evita CORS no desenvolvimento inicial sem introduzir API Gateway ou BFF na FASE 23.
 
 ## Dono dos Dados
 

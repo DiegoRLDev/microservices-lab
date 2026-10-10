@@ -1,0 +1,26 @@
+<section class="page">
+  <div class="page-header">
+    <span>{{ page().phase }}</span>
+    <h1>{{ page().title }}</h1>
+    <p>{{ page().description }}</p>
+  </div>
+
+  <div class="status-panel">
+    <div>
+      <h2>Laboratorio disponivel</h2>
+      <p>
+        A base Angular esta pronta para receber as telas das proximas fases e consumir
+        os microsservicos por rotas locais de API.
+      </p>
+    </div>
+
+    <dl>
+      @for (target of health.targets; track target.name) {
+        <div>
+          <dt>{{ target.name }}</dt>
+          <dd>{{ target.url }}</dd>
+        </div>
+      }
+    </dl>
+  </div>
+</section>

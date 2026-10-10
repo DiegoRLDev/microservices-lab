@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using MicroservicesLab.PricingService.Contracts;
 using MicroservicesLab.PricingService.Services;
 
@@ -66,6 +67,18 @@ public sealed class PricingApiTests
                         ["Kafka:Enabled"] = "false",
                         ["GrpcLab:Enabled"] = "false"
                     });
+                });
+
+                builder.ConfigureServices(services =>
+                {
+                    var hostedServices = services
+                        .Where(descriptor => descriptor.ServiceType == typeof(IHostedService))
+                        .ToArray();
+
+                    foreach (var hostedService in hostedServices)
+                    {
+                        services.Remove(hostedService);
+                    }
                 });
             });
     }
