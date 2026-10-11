@@ -50,7 +50,7 @@ A Parte III adiciona uma aplicacao Angular para interagir com o laboratorio. A i
 | 23 | Angular, estrutura inicial e Docker Compose | Concluido |
 | 24 | Dashboard e navegacao | Concluido |
 | 25 | Produtos e estoque | Concluido |
-| 26 | Pedidos e pagamentos | Pendente |
+| 26 | Pedidos e pagamentos | Concluido |
 | 27 | Precos realtime (SSE) | Pendente |
 | 28 | Auditoria e observabilidade | Pendente |
 | 29 | Integracao e validacao final | Pendente |
@@ -74,10 +74,20 @@ O front-end deve consumir as APIs existentes sem introduzir API Gateway, BFF, au
 | 23 | Angular, estrutura inicial e Docker Compose | Criar a base Angular, rotas iniciais, configuracao de APIs e integracao com Docker Compose. | Concluido |
 | 24 | Dashboard e navegacao | Evoluir a tela inicial e a navegacao com dados reais basicos do laboratorio. | Concluido |
 | 25 | Produtos e estoque | Consumir as APIs de produtos, cadastro, detalhes e disponibilidade quando fizer sentido para o lab. | Concluido |
-| 26 | Pedidos e pagamentos | Criar pedidos e acompanhar a evolucao assincrona do status. | Pendente |
+| 26 | Pedidos e pagamentos | Criar pedidos e acompanhar a evolucao assincrona do status. | Concluido |
 | 27 | Precos realtime (SSE) | Consumir o stream SSE do `PriceFeed.Service` e/ou o estado atual do `Pricing.Service`. | Pendente |
 | 28 | Auditoria e observabilidade | Expor auditoria e links/leituras operacionais sem substituir Jaeger, Prometheus ou Grafana. | Pendente |
 | 29 | Integracao e validacao final | Validar o fluxo completo da aplicacao com os microsservicos. | Pendente |
+
+### Pendencia futura da Fase 29.1
+
+Avaliar e implementar a consistencia entre pedidos e estoque sem alterar o comportamento atual da FASE 26:
+
+- reserva atomica de estoque;
+- idempotencia;
+- compensacao de estoque em pagamento rejeitado ou falhas;
+- concorrencia;
+- tratamento de falhas distribuidas.
 
 ## Objetivo da Parte II
 

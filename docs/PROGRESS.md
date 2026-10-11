@@ -48,7 +48,7 @@ O laboratorio esta organizado em duas partes:
 | 23 | Angular, estrutura inicial e Docker Compose | Concluido |
 | 24 | Dashboard e navegacao | Concluido |
 | 25 | Produtos e estoque | Concluido |
-| 26 | Pedidos e pagamentos | Pendente |
+| 26 | Pedidos e pagamentos | Concluido |
 | 27 | Precos realtime (SSE) | Pendente |
 | 28 | Auditoria e observabilidade | Pendente |
 | 29 | Integracao e validacao final | Pendente |
@@ -1144,6 +1144,20 @@ go test ./...
 
 Resultado da validacao:
 
+- build Angular local: aprovado com `pnpm build`;
+- `docker compose config --quiet`: aprovado;
+- `docker compose up -d --build frontend`: aprovado, imagem `microservices-lab-frontend:latest` reconstruida e container iniciado;
+- `dotnet build .\MicroservicesLab.sln`: aprovado, 0 warnings, 0 errors;
+- `dotnet test .\MicroservicesLab.sln --no-build`: aprovado, 27/27 testes;
+- `go test ./...` em `PriceFeed.Service`: aprovado;
+- `go test ./...` em `Payment.Service`: aprovado;
+- smoke via Docker/Nginx: `GET http://127.0.0.1:4200/pedidos` retornou HTTP 200;
+- pedido real criado via proxy do front-end: `5b6ec07b-17a9-489e-be2a-d05793153ce2`, produto `f525ba73-8eb8-4d6f-aaab-a37546146daa`, quantidade `1`, total `5500.00`;
+- polling manual confirmou transicao `Pending -> Paid`;
+- durante a primeira tentativa de smoke, o `Payment.Service` nao estava em execucao por falha anterior de conexao ao Kafka; o servico foi iniciado com `docker compose up -d payment-service` e a validacao foi repetida com sucesso.
+
+Resultado da validacao:
+
 - `node --version`: disponivel (`v24.19.0`);
 - `pnpm --version`: aprovado (`11.25.0`);
 - `pnpm install --frozen-lockfile`: aprovado;
@@ -1249,3 +1263,63 @@ Resultado da validacao:
 - produto real criado via proxy do front-end: `7147eab7-a183-489c-8b46-934e9bbe4ad0`, `Produto Frontend Fase 25`, preco `123.45`, estoque `7`;
 - detalhes do produto consultados com sucesso;
 - disponibilidade para quantidade `3` retornou `isAvailable=true` e preservou `availableQuantity=7`.
+
+## FASE 26.1 - Analise da integracao entre pedidos e estoque
+
+Status: Concluido sem implementacao
+
+Conclusao:
+
+- o contrato gRPC ja possui `ReserveStock`;
+- o `Inventory.Service` ja implementa reserva via HTTP e gRPC;
+- o `Order.Service` atualmente usa somente `CheckAvailability`;
+- a reserva atual nao possui idempotencia nem protecao explicita contra concorrencia;
+- a integracao segura da reserva foi adiada para a FASE 29.1.
+
+Pendencia futura da FASE 29.1:
+
+- reserva atomica;
+- idempotencia;
+- compensacao de estoque;
+- concorrencia;
+- tratamento de falhas distribuidas.
+
+## FASE 26.2 - Interface de pedidos e acompanhamento de pagamentos
+
+Status: Concluido
+
+Criado/evoluido:
+
+- tela funcional na rota `/pedidos`;
+- listagem real de pedidos consumindo `GET /api/order/orders`;
+- criacao de pedidos consumindo `POST /api/order/orders`;
+- consulta de detalhes consumindo `GET /api/order/orders/{id}`;
+- seletor de produtos reais carregados do `Inventory.Service`;
+- formularios reativos com validacao de produto e quantidade;
+- status visuais para `Pending`, `Paid` e `PaymentRejected`;
+- polling de detalhes enquanto o pedido esta `Pending`;
+- interrupcao de polling em status final, falhas consecutivas ou destruicao do componente;
+- estados de loading, vazio, sucesso e erro;
+- atualizacao manual da lista e do pedido selecionado.
+
+Decisoes didaticas:
+
+- nao foi criado endpoint HTTP no `Payment.Service`;
+- nao foram implementados SSE ou WebSocket para pedidos;
+- nao foi implementada reserva automatica de estoque;
+- a tela usa exclusivamente o comportamento atual do backend.
+
+Validacao:
+
+```powershell
+cd .\src\frontend\MicroservicesLab.App
+pnpm build
+docker compose config --quiet
+docker compose up -d --build frontend
+dotnet build .\MicroservicesLab.sln
+dotnet test .\MicroservicesLab.sln --no-build
+cd .\src\services\PriceFeed.Service
+go test ./...
+cd ..\Payment.Service
+go test ./...
+```

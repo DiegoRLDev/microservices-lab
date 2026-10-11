@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { DashboardPageComponent } from './pages/dashboard/dashboard-page.component';
+import { OrdersPageComponent } from './pages/orders/orders-page.component';
 import { PlaceholderPageComponent } from './pages/placeholder/placeholder-page.component';
 import { ProductsPageComponent } from './pages/products/products-page.component';
 
@@ -19,12 +20,7 @@ export const routes: Routes = [
   },
   {
     path: 'pedidos',
-    component: PlaceholderPageComponent,
-    data: {
-      title: 'Pedidos e pagamentos',
-      description: 'Area preparada para criacao de pedidos e acompanhamento do status de pagamento.',
-      phase: 'Fase 26'
-    }
+    component: OrdersPageComponent
   },
   {
     path: 'precos',

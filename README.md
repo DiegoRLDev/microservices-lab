@@ -219,7 +219,7 @@ Na FASE 16, `Pricing.Service` consome `price-updated` com o consumer group `pric
 | 23 | Angular, estrutura inicial e Docker Compose | Concluido |
 | 24 | Dashboard e navegacao | Concluido |
 | 25 | Produtos e estoque | Concluido |
-| 26 | Pedidos e pagamentos | Pendente |
+| 26 | Pedidos e pagamentos | Concluido |
 | 27 | Precos realtime (SSE) | Pendente |
 | 28 | Auditoria e observabilidade | Pendente |
 | 29 | Integracao e validacao final | Pendente |
@@ -244,7 +244,16 @@ Na FASE 25, a rota `/produtos` passa a consumir o `Inventory.Service` por meio d
 
 A tela inclui estados de carregamento, vazio, erro, atualizacao manual e layout responsivo. Edicao, exclusao e reserva manual de estoque nao foram implementadas nesta fase.
 
-As telas de pedidos, precos, auditoria e observabilidade continuam como placeholders para as proximas fases.
+Na FASE 26.2, a rota `/pedidos` passa a consumir o `Order.Service` por meio do proxy do front-end:
+
+- listagem real de pedidos via `GET /api/order/orders`;
+- criacao de pedidos via `POST /api/order/orders`;
+- consulta de detalhes via `GET /api/order/orders/{id}`;
+- acompanhamento de pagamento por polling enquanto o status estiver `Pending`.
+
+A criacao de pedidos usa o comportamento atual do backend: o `Order.Service` consulta disponibilidade no `Inventory.Service`, mas nao reserva estoque automaticamente. A consistencia entre pedidos e estoque fica registrada como pendencia futura da FASE 29.1.
+
+As telas de precos, auditoria e observabilidade continuam como placeholders para as proximas fases.
 
 Portas usadas pelo front-end:
 

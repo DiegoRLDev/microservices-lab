@@ -14,6 +14,11 @@ export interface OrderResponse {
   createdAt: string;
 }
 
+export interface CreateOrderRequest {
+  productId: string;
+  quantity: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class OrderApiService {
   private readonly http = inject(HttpClient);
@@ -21,5 +26,13 @@ export class OrderApiService {
 
   listOrders() {
     return this.http.get<OrderResponse[]>(`${this.endpoints.order}/orders`);
+  }
+
+  getOrder(id: string) {
+    return this.http.get<OrderResponse>(`${this.endpoints.order}/orders/${id}`);
+  }
+
+  createOrder(request: CreateOrderRequest) {
+    return this.http.post<OrderResponse>(`${this.endpoints.order}/orders`, request);
   }
 }
