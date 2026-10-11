@@ -49,7 +49,7 @@ O laboratorio esta organizado em duas partes:
 | 24 | Dashboard e navegacao | Concluido |
 | 25 | Produtos e estoque | Concluido |
 | 26 | Pedidos e pagamentos | Concluido |
-| 27 | Precos realtime (SSE) | Pendente |
+| 27 | Precos realtime (SSE) | Concluido |
 | 28 | Auditoria e observabilidade | Pendente |
 | 29 | Integracao e validacao final | Pendente |
 
@@ -1136,6 +1136,62 @@ docker compose config --quiet
 docker compose build frontend
 dotnet build .\MicroservicesLab.sln
 dotnet test .\MicroservicesLab.sln
+cd .\src\services\PriceFeed.Service
+go test ./...
+cd ..\Payment.Service
+go test ./...
+```
+
+Resultado da validacao:
+
+- build Angular local: aprovado com `pnpm build`;
+- `docker compose config --quiet`: aprovado;
+- `docker compose up -d --build frontend`: aprovado, imagem `microservices-lab-frontend:latest` reconstruida e container iniciado;
+- `dotnet build .\MicroservicesLab.sln`: aprovado, 0 warnings, 0 errors;
+- `dotnet test .\MicroservicesLab.sln --no-build`: aprovado, 27/27 testes;
+- `go test ./...` em `PriceFeed.Service`: aprovado;
+- `go test ./...` em `Payment.Service`: aprovado;
+- smoke via Docker/Nginx: `GET http://127.0.0.1:4200/precos` retornou HTTP 200;
+- snapshot REST via `GET http://127.0.0.1:4200/api/pricing/prices` retornou 5 simbolos;
+- stream SSE via `GET http://127.0.0.1:4200/api/pricefeed/prices/stream` retornou eventos reais `price-update`;
+- em uma janela de 6 segundos, foram observados 60 eventos SSE;
+- exemplo real recebido: `{"symbol":"WEGE3","price":4030,"occurredAt":"2026-10-11T04:18:56.943107183Z"}`;
+- falhas forcadas de servicos nao foram executadas nesta validacao para evitar interromper o ambiente local; a tela mantem REST e SSE em secoes independentes e trata erro por fluxo.
+
+## FASE 27 - Precos realtime (SSE)
+
+Status: Concluido
+
+Criado/evoluido:
+
+- tela funcional na rota `/precos`;
+- snapshot REST consumindo `GET /api/pricing/prices`;
+- stream realtime consumindo `GET /api/pricefeed/prices/stream`;
+- servico Angular especifico para SSE usando `EventSource`;
+- tratamento do evento SSE real `price-update`;
+- tipagem do payload real `{ symbol, price, occurredAt }`;
+- separacao visual entre REST/Kafka e SSE direto;
+- estados de conexao: conectando, conectado, reconectando, desconectado e erro;
+- destaque visual breve quando um simbolo recebe novo preco;
+- historico recente de eventos SSE recebidos;
+- encerramento da conexao SSE ao sair da tela.
+
+Decisoes didaticas:
+
+- o snapshot REST representa o estado processado pelo `Pricing.Service` apos consumo Kafka;
+- o stream SSE representa atualizacoes diretas do `PriceFeed.Service`;
+- os dois fluxos sao exibidos separadamente porque podem divergir momentaneamente;
+- nao foram implementados WebSocket, graficos complexos, API Gateway, BFF ou novos endpoints.
+
+Validacao:
+
+```powershell
+cd .\src\frontend\MicroservicesLab.App
+pnpm build
+docker compose config --quiet
+docker compose up -d --build frontend
+dotnet build .\MicroservicesLab.sln
+dotnet test .\MicroservicesLab.sln --no-build
 cd .\src\services\PriceFeed.Service
 go test ./...
 cd ..\Payment.Service

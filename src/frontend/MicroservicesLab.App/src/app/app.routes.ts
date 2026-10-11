@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { DashboardPageComponent } from './pages/dashboard/dashboard-page.component';
 import { OrdersPageComponent } from './pages/orders/orders-page.component';
 import { PlaceholderPageComponent } from './pages/placeholder/placeholder-page.component';
+import { PricesPageComponent } from './pages/prices/prices-page.component';
 import { ProductsPageComponent } from './pages/products/products-page.component';
 
 export const routes: Routes = [
@@ -24,12 +25,7 @@ export const routes: Routes = [
   },
   {
     path: 'precos',
-    component: PlaceholderPageComponent,
-    data: {
-      title: 'Precos realtime',
-      description: 'Area preparada para observar precos via SSE e APIs de pricing.',
-      phase: 'Fase 27'
-    }
+    component: PricesPageComponent
   },
   {
     path: 'auditoria',

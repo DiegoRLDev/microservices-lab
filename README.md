@@ -220,7 +220,7 @@ Na FASE 16, `Pricing.Service` consome `price-updated` com o consumer group `pric
 | 24 | Dashboard e navegacao | Concluido |
 | 25 | Produtos e estoque | Concluido |
 | 26 | Pedidos e pagamentos | Concluido |
-| 27 | Precos realtime (SSE) | Pendente |
+| 27 | Precos realtime (SSE) | Concluido |
 | 28 | Auditoria e observabilidade | Pendente |
 | 29 | Integracao e validacao final | Pendente |
 
@@ -253,7 +253,14 @@ Na FASE 26.2, a rota `/pedidos` passa a consumir o `Order.Service` por meio do p
 
 A criacao de pedidos usa o comportamento atual do backend: o `Order.Service` consulta disponibilidade no `Inventory.Service`, mas nao reserva estoque automaticamente. A consistencia entre pedidos e estoque fica registrada como pendencia futura da FASE 29.1.
 
-As telas de precos, auditoria e observabilidade continuam como placeholders para as proximas fases.
+Na FASE 27, a rota `/precos` demonstra dois caminhos de dados em paralelo:
+
+- snapshot REST via `GET /api/pricing/prices`, com os ultimos precos processados pelo `Pricing.Service` a partir do Kafka;
+- stream SSE via `GET /api/pricefeed/prices/stream`, com atualizacoes diretas do `PriceFeed.Service`.
+
+A tela exibe estado da conexao SSE, ultimos eventos recebidos, destaque visual quando um simbolo muda e atualizacao manual do snapshot REST. WebSocket e graficos complexos nao foram implementados nesta fase.
+
+As telas de auditoria e observabilidade continuam como placeholders para as proximas fases.
 
 Portas usadas pelo front-end:
 

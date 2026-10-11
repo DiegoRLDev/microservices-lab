@@ -51,7 +51,7 @@ A Parte III adiciona uma aplicacao Angular para interagir com o laboratorio. A i
 | 24 | Dashboard e navegacao | Concluido |
 | 25 | Produtos e estoque | Concluido |
 | 26 | Pedidos e pagamentos | Concluido |
-| 27 | Precos realtime (SSE) | Pendente |
+| 27 | Precos realtime (SSE) | Concluido |
 | 28 | Auditoria e observabilidade | Pendente |
 | 29 | Integracao e validacao final | Pendente |
 
@@ -75,7 +75,7 @@ O front-end deve consumir as APIs existentes sem introduzir API Gateway, BFF, au
 | 24 | Dashboard e navegacao | Evoluir a tela inicial e a navegacao com dados reais basicos do laboratorio. | Concluido |
 | 25 | Produtos e estoque | Consumir as APIs de produtos, cadastro, detalhes e disponibilidade quando fizer sentido para o lab. | Concluido |
 | 26 | Pedidos e pagamentos | Criar pedidos e acompanhar a evolucao assincrona do status. | Concluido |
-| 27 | Precos realtime (SSE) | Consumir o stream SSE do `PriceFeed.Service` e/ou o estado atual do `Pricing.Service`. | Pendente |
+| 27 | Precos realtime (SSE) | Consumir o stream SSE do `PriceFeed.Service` e o estado atual do `Pricing.Service`. | Concluido |
 | 28 | Auditoria e observabilidade | Expor auditoria e links/leituras operacionais sem substituir Jaeger, Prometheus ou Grafana. | Pendente |
 | 29 | Integracao e validacao final | Validar o fluxo completo da aplicacao com os microsservicos. | Pendente |
 
