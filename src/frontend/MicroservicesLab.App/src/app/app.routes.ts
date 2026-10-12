@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { AuditPageComponent } from './pages/audit/audit-page.component';
 import { DashboardPageComponent } from './pages/dashboard/dashboard-page.component';
 import { OrdersPageComponent } from './pages/orders/orders-page.component';
 import { PlaceholderPageComponent } from './pages/placeholder/placeholder-page.component';
@@ -29,12 +30,7 @@ export const routes: Routes = [
   },
   {
     path: 'auditoria',
-    component: PlaceholderPageComponent,
-    data: {
-      title: 'Auditoria',
-      description: 'Area reservada para eventos auditados quando a API de consulta existir.',
-      phase: 'Fase 28'
-    }
+    component: AuditPageComponent
   },
   {
     path: 'observabilidade',

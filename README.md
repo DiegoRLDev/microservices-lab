@@ -221,7 +221,7 @@ Na FASE 16, `Pricing.Service` consome `price-updated` com o consumer group `pric
 | 25 | Produtos e estoque | Concluido |
 | 26 | Pedidos e pagamentos | Concluido |
 | 27 | Precos realtime (SSE) | Concluido |
-| 28 | Auditoria e observabilidade | Pendente |
+| 28 | Auditoria e observabilidade | Em execucao |
 | 29 | Integracao e validacao final | Pendente |
 
 ## Parte III: Aplicacao Front-end
@@ -260,7 +260,14 @@ Na FASE 27, a rota `/precos` demonstra dois caminhos de dados em paralelo:
 
 A tela exibe estado da conexao SSE, ultimos eventos recebidos, destaque visual quando um simbolo muda e atualizacao manual do snapshot REST. WebSocket e graficos complexos nao foram implementados nesta fase.
 
-As telas de auditoria e observabilidade continuam como placeholders para as proximas fases.
+Na FASE 28.1, o `Audit.Worker` passa a hospedar uma API HTTP somente leitura sem criar um segundo consumidor Kafka:
+
+- `GET /api/audit/audit-events`;
+- filtros opcionais por `eventType` e `messageKey`;
+- limite de resultados para evitar consultas ilimitadas;
+- dados reais da tabela `audit_events` em `audit_db`.
+
+A rota `/auditoria` lista eventos persistidos, permite consultar detalhes e exibe o payload completo formatado quando ele e JSON valido. A tela de observabilidade continua como placeholder para a proxima etapa.
 
 Portas usadas pelo front-end:
 

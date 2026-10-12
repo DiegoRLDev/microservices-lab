@@ -12,6 +12,7 @@ export interface ApiEndpoints {
   inventory: string;
   priceFeed: string;
   pricing: string;
+  audit: string;
   observability: ObservabilityLinks;
 }
 

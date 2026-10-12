@@ -224,6 +224,7 @@ services:
       dockerfile: src/workers/Audit.Worker/Dockerfile
     environment:
       DOTNET_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc
       ConnectionStrings__AuditDb: Host=postgres;Port=5432;Database=audit_db;Username=postgres;Password=postgres
@@ -233,6 +234,8 @@ services:
       Kafka__Topics__0: order-created
       Kafka__Topics__1: payment-approved
       Kafka__Topics__2: payment-rejected
+    ports:
+      - "5288:8080"
     depends_on:
       otel-collector:
         condition: service_started

@@ -30,5 +30,13 @@
     "pathRewrite": {
       "^/api/pricing": ""
     }
+  },
+  "/api/audit": {
+    "target": "http://localhost:5288",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": {
+      "^/api/audit": ""
+    }
   }
 }

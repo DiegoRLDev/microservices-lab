@@ -50,7 +50,7 @@ O laboratorio esta organizado em duas partes:
 | 25 | Produtos e estoque | Concluido |
 | 26 | Pedidos e pagamentos | Concluido |
 | 27 | Precos realtime (SSE) | Concluido |
-| 28 | Auditoria e observabilidade | Pendente |
+| 28 | Auditoria e observabilidade | Em execucao |
 | 29 | Integracao e validacao final | Pendente |
 
 ## Regra de execucao
@@ -1136,6 +1136,75 @@ docker compose config --quiet
 docker compose build frontend
 dotnet build .\MicroservicesLab.sln
 dotnet test .\MicroservicesLab.sln
+cd .\src\services\PriceFeed.Service
+go test ./...
+cd ..\Payment.Service
+go test ./...
+```
+
+Resultado da validacao:
+
+- `dotnet test .\tests\Audit.Worker.Tests\Audit.Worker.Tests.csproj`: aprovado, 7/7 testes;
+- build Angular local: aprovado com `pnpm build`;
+- `docker compose config --quiet`: aprovado;
+- `docker compose up -d --build`: aprovado, incluindo `audit-worker` com HTTP em `http://localhost:5288`;
+- `dotnet build .\MicroservicesLab.sln`: aprovado, 0 warnings, 0 errors;
+- `dotnet test .\MicroservicesLab.sln --no-build`: aprovado, 32/32 testes;
+- `go test ./...` em `PriceFeed.Service`: aprovado;
+- `go test ./...` em `Payment.Service`: aprovado;
+- smoke via Docker/Nginx: `GET http://127.0.0.1:4200/auditoria` retornou HTTP 200;
+- `GET http://127.0.0.1:4200/api/audit/health` retornou HTTP 200;
+- pedido real criado para validacao: `88dc3e3f-a4df-4945-8b3b-851e43f0813e`;
+- pagamento confirmado com transicao `Pending -> Paid`;
+- consulta `GET /api/audit/audit-events?messageKey=88dc3e3f-a4df-4945-8b3b-851e43f0813e&limit=20` retornou 2 eventos reais: `PaymentApproved` e `OrderCreated`;
+- filtro por tipo `eventType=OrderCreated` retornou 1 evento;
+- validacao de duplicidade confirmou que nao houve `EventId` duplicado persistido para o pedido;
+- parametro invalido `limit=999` retornou HTTP 400 com mensagem `limit must be between 1 and 200.`.
+
+## FASE 28.1 - API de consulta de auditoria e interface Angular
+
+Status: Concluido
+
+Arquitetura escolhida:
+
+- a API HTTP foi hospedada no proprio `Audit.Worker`;
+- o consumidor Kafka existente continua sendo o unico consumidor de auditoria;
+- o mesmo `AuditDbContext` consulta `audit_db`;
+- nao foi criado servico separado, API Gateway ou BFF.
+
+Criado/evoluido:
+
+- endpoint `GET /audit-events` no `Audit.Worker`;
+- endpoint `GET /health` no `Audit.Worker`;
+- consulta read-only com `AsNoTracking()`;
+- ordenacao do mais recente para o mais antigo;
+- limite de resultados com maximo de 200 registros;
+- filtros opcionais por `eventType` e `messageKey`;
+- alias `orderId` aceito quando equivalente a `messageKey`;
+- proxy Docker/Nginx e proxy de desenvolvimento em `/api/audit`;
+- tela Angular funcional na rota `/auditoria`;
+- listagem de eventos persistidos;
+- detalhes do evento selecionado;
+- payload completo preservado e formatado quando JSON valido.
+
+Decisoes didaticas:
+
+- o schema do banco nao foi alterado;
+- nenhuma migration foi criada;
+- a idempotencia existente por `EventId` foi preservada;
+- contratos Kafka e regras de pedidos/pagamentos nao foram modificados;
+- nao foi implementado polling automatico, edicao, exclusao ou busca textual complexa.
+
+Validacao:
+
+```powershell
+dotnet test .\tests\Audit.Worker.Tests\Audit.Worker.Tests.csproj
+cd .\src\frontend\MicroservicesLab.App
+pnpm build
+docker compose config --quiet
+docker compose up -d --build
+dotnet build .\MicroservicesLab.sln
+dotnet test .\MicroservicesLab.sln --no-build
 cd .\src\services\PriceFeed.Service
 go test ./...
 cd ..\Payment.Service

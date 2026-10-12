@@ -1,0 +1,154 @@
+<section class="audit-page">
+  <header class="page-header">
+    <div>
+      <span>Fase 28.1</span>
+      <h1>Auditoria</h1>
+      <p>
+        Consulta somente leitura dos eventos persistidos pelo Audit.Worker a
+        partir dos topicos Kafka do laboratorio.
+      </p>
+    </div>
+
+    <button type="button" class="primary-action" (click)="loadEvents()" [disabled]="status() === 'loading'">
+      {{ status() === 'loading' ? 'Atualizando...' : 'Atualizar eventos' }}
+    </button>
+  </header>
+
+  <section class="panel filters-panel">
+    <form class="filters-form" [formGroup]="filtersForm" (ngSubmit)="loadEvents()">
+      <label>
+        Tipo do evento
+        <input type="text" formControlName="eventType" placeholder="OrderCreated">
+      </label>
+
+      <label>
+        Identificador do pedido/agregado
+        <input type="text" formControlName="messageKey" placeholder="Kafka message key">
+      </label>
+
+      <label>
+        Limite
+        <input type="number" formControlName="limit" min="1" max="200" step="1">
+        @if (fieldHasError()) {
+          <small>Informe um limite entre 1 e 200.</small>
+        }
+      </label>
+
+      <div class="filter-actions">
+        <button type="submit" class="primary-action" [disabled]="status() === 'loading'">
+          Filtrar
+        </button>
+        <button type="button" class="secondary-action" (click)="clearFilters()">
+          Limpar
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <div class="content-grid">
+    <section class="panel events-panel">
+      <div class="section-heading">
+        <div>
+          <h2>Eventos persistidos</h2>
+          <p>Ordenados do mais recente para o mais antigo.</p>
+        </div>
+        @if (lastUpdatedAt()) {
+          <span>{{ lastUpdatedAt() | date:'shortTime':'':'pt-BR' }}</span>
+        }
+      </div>
+
+      @if (status() === 'loading') {
+        <p class="state-message">Carregando eventos...</p>
+      } @else if (status() === 'error') {
+        <p class="feedback error">{{ error() }}</p>
+      } @else if (!hasEvents()) {
+        <p class="state-message">Nenhum evento encontrado para os filtros informados.</p>
+      } @else {
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Auditado em</th>
+                <th>Tipo</th>
+                <th>Pedido/agregado</th>
+                <th>EventId</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (auditEvent of events(); track auditEvent.id) {
+                <tr [class.selected]="selectedEvent()?.id === auditEvent.id">
+                  <td>{{ auditEvent.auditedAt | date:'short':'':'pt-BR' }}</td>
+                  <td>
+                    <span class="event-type">{{ auditEvent.eventType }}</span>
+                    <small>{{ auditEvent.topic }}</small>
+                  </td>
+                  <td class="mono">{{ aggregateLabel(auditEvent) }}</td>
+                  <td class="mono">{{ auditEvent.eventId }}</td>
+                  <td>
+                    <button type="button" class="link-action" (click)="selectEvent(auditEvent)">
+                      Detalhes
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+
+    <section class="panel details-panel">
+      <div class="section-heading">
+        <div>
+          <h2>Detalhes</h2>
+          <p>Payload preservado conforme registrado no banco de auditoria.</p>
+        </div>
+      </div>
+
+      @if (selectedEvent()) {
+        <dl>
+          <div>
+            <dt>EventId</dt>
+            <dd>{{ selectedEvent()?.eventId }}</dd>
+          </div>
+          <div>
+            <dt>Tipo</dt>
+            <dd>{{ selectedEvent()?.eventType }}</dd>
+          </div>
+          <div>
+            <dt>Topico</dt>
+            <dd>{{ selectedEvent()?.topic }}</dd>
+          </div>
+          <div>
+            <dt>Chave</dt>
+            <dd>{{ selectedEvent()?.messageKey }}</dd>
+          </div>
+          <div>
+            <dt>Particao / offset</dt>
+            <dd>{{ selectedEvent()?.partition }} / {{ selectedEvent()?.offset }}</dd>
+          </div>
+          <div>
+            <dt>Ocorrido em</dt>
+            <dd>{{ selectedEvent()?.occurredAt ? (selectedEvent()?.occurredAt | date:'short':'':'pt-BR') : 'Nao informado' }}</dd>
+          </div>
+          <div>
+            <dt>Auditado em</dt>
+            <dd>{{ selectedEvent()?.auditedAt | date:'short':'':'pt-BR' }}</dd>
+          </div>
+          <div>
+            <dt>CorrelationId</dt>
+            <dd>{{ selectedEvent()?.correlationId || 'Nao informado' }}</dd>
+          </div>
+        </dl>
+
+        <div class="payload-block">
+          <h3>Payload</h3>
+          <pre>{{ selectedPayload() }}</pre>
+        </div>
+      } @else {
+        <p class="state-message">Selecione um evento para ver os detalhes.</p>
+      }
+    </section>
+  </div>
+</section>
