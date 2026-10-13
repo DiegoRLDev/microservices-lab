@@ -102,7 +102,7 @@ pnpm install
 pnpm start
 ```
 
-O `pnpm start` usa `proxy.conf.json` para encaminhar `/api/order`, `/api/inventory`, `/api/pricefeed` e `/api/pricing` para as portas locais dos servicos, evitando CORS durante o desenvolvimento.
+O `pnpm start` usa `proxy.conf.json` para encaminhar `/api/order`, `/api/inventory`, `/api/pricefeed`, `/api/pricing` e `/api/audit` para as portas locais dos servicos, evitando CORS durante o desenvolvimento.
 
 Kubernetes local:
 
@@ -221,7 +221,7 @@ Na FASE 16, `Pricing.Service` consome `price-updated` com o consumer group `pric
 | 25 | Produtos e estoque | Concluido |
 | 26 | Pedidos e pagamentos | Concluido |
 | 27 | Precos realtime (SSE) | Concluido |
-| 28 | Auditoria e observabilidade | Em execucao |
+| 28 | Auditoria e observabilidade | Concluido |
 | 29 | Integracao e validacao final | Pendente |
 
 ## Parte III: Aplicacao Front-end
@@ -267,7 +267,16 @@ Na FASE 28.1, o `Audit.Worker` passa a hospedar uma API HTTP somente leitura sem
 - limite de resultados para evitar consultas ilimitadas;
 - dados reais da tabela `audit_events` em `audit_db`.
 
-A rota `/auditoria` lista eventos persistidos, permite consultar detalhes e exibe o payload completo formatado quando ele e JSON valido. A tela de observabilidade continua como placeholder para a proxima etapa.
+A rota `/auditoria` lista eventos persistidos, permite consultar detalhes e exibe o payload completo formatado quando ele e JSON valido.
+
+Na FASE 28.2, a rota `/observabilidade` centraliza a visao operacional do laboratorio:
+
+- health checks reais para `Order.Service`, `Inventory.Service`, `Audit.Worker`, `PriceFeed.Service` e `Pricing.Service`;
+- `Payment.Service` aparece como nao monitorado, porque nao expoe endpoint HTTP de health nesta fase;
+- links externos para Grafana, Prometheus e Jaeger usando as portas publicadas no host;
+- visao estatica dos fluxos de pedidos, precos e observabilidade.
+
+A tela possui atualizacao manual e polling simples a cada 15 segundos. Ela nao cria novos endpoints, nao consulta APIs internas de Grafana/Prometheus/Jaeger e nao substitui as ferramentas de observabilidade.
 
 Portas usadas pelo front-end:
 
@@ -278,6 +287,10 @@ Order API:          /api/order      -> Order.Service
 Inventory API:      /api/inventory  -> Inventory.Service
 PriceFeed API:      /api/pricefeed  -> PriceFeed.Service
 Pricing API:        /api/pricing    -> Pricing.Service
+Audit API:          /api/audit      -> Audit.Worker
+Grafana:            http://localhost:3000
+Prometheus:         http://localhost:9090
+Jaeger:             http://localhost:16686
 ```
 
 ## Parte II: Realtime Distributed Systems

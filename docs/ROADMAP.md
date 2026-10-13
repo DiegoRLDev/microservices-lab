@@ -52,7 +52,7 @@ A Parte III adiciona uma aplicacao Angular para interagir com o laboratorio. A i
 | 25 | Produtos e estoque | Concluido |
 | 26 | Pedidos e pagamentos | Concluido |
 | 27 | Precos realtime (SSE) | Concluido |
-| 28 | Auditoria e observabilidade | Em execucao |
+| 28 | Auditoria e observabilidade | Concluido |
 | 29 | Integracao e validacao final | Pendente |
 
 ## Objetivo da Parte III
@@ -76,7 +76,8 @@ O front-end deve consumir as APIs existentes sem introduzir API Gateway, BFF, au
 | 25 | Produtos e estoque | Consumir as APIs de produtos, cadastro, detalhes e disponibilidade quando fizer sentido para o lab. | Concluido |
 | 26 | Pedidos e pagamentos | Criar pedidos e acompanhar a evolucao assincrona do status. | Concluido |
 | 27 | Precos realtime (SSE) | Consumir o stream SSE do `PriceFeed.Service` e o estado atual do `Pricing.Service`. | Concluido |
-| 28 | Auditoria e observabilidade | Expor auditoria e links/leituras operacionais sem substituir Jaeger, Prometheus ou Grafana. | Em execucao |
+| 28 | Auditoria e observabilidade | Expor auditoria e links/leituras operacionais sem substituir Jaeger, Prometheus ou Grafana. | Concluido |
+| 29 | Integracao e validacao final | Validar o fluxo completo da aplicacao com os microsservicos. | Pendente |
 
 ### Fase 28.1 - Auditoria
 
@@ -89,7 +90,18 @@ Escopo:
 - filtros opcionais por tipo do evento e chave da mensagem;
 - tela Angular `/auditoria`;
 - preservacao do consumidor Kafka existente e da idempotencia por `EventId`.
-| 29 | Integracao e validacao final | Validar o fluxo completo da aplicacao com os microsservicos. | Pendente |
+
+### Fase 28.2 - Observabilidade
+
+Status: Concluido
+
+Escopo:
+
+- tela Angular `/observabilidade`;
+- health checks reais para servicos HTTP existentes;
+- `Payment.Service` representado como nao monitorado por nao expor health HTTP nesta fase;
+- atalhos para Grafana, Prometheus e Jaeger usando portas publicadas no host;
+- visao estatica dos fluxos de pedidos, precos e observabilidade.
 
 ### Pendencia futura da Fase 29.1
 

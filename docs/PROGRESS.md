@@ -50,7 +50,7 @@ O laboratorio esta organizado em duas partes:
 | 25 | Produtos e estoque | Concluido |
 | 26 | Pedidos e pagamentos | Concluido |
 | 27 | Precos realtime (SSE) | Concluido |
-| 28 | Auditoria e observabilidade | Em execucao |
+| 28 | Auditoria e observabilidade | Concluido |
 | 29 | Integracao e validacao final | Pendente |
 
 ## Regra de execucao
@@ -1226,6 +1226,57 @@ Resultado da validacao:
 - em uma janela de 6 segundos, foram observados 60 eventos SSE;
 - exemplo real recebido: `{"symbol":"WEGE3","price":4030,"occurredAt":"2026-10-11T04:18:56.943107183Z"}`;
 - falhas forcadas de servicos nao foram executadas nesta validacao para evitar interromper o ambiente local; a tela mantem REST e SSE em secoes independentes e trata erro por fluxo.
+
+## FASE 28.2 - Interface de observabilidade
+
+Status: Concluido
+
+Criado/evoluido:
+
+- tela funcional na rota `/observabilidade`;
+- health checks reais para `Order.Service`, `Inventory.Service`, `Audit.Worker`, `PriceFeed.Service` e `Pricing.Service`;
+- `Payment.Service` exibido como nao monitorado, porque nao expoe endpoint HTTP de health nesta fase;
+- atualizacao manual da saude dos servicos;
+- polling simples a cada 15 segundos, encerrado ao sair da tela;
+- links para Grafana, Prometheus e Jaeger usando as portas publicadas no host;
+- visao estatica dos fluxos de pedidos, precos e observabilidade;
+- reutilizacao da configuracao central de endpoints do Angular.
+
+Decisoes didaticas:
+
+- nenhum endpoint de health novo foi criado;
+- a tela diferencia servico indisponivel de servico sem monitoramento HTTP;
+- Grafana, Prometheus e Jaeger continuam sendo as ferramentas de observabilidade;
+- a visao arquitetural e informativa e nao representa telemetria em tempo real.
+
+Validacao:
+
+```powershell
+cd .\src\frontend\MicroservicesLab.App
+pnpm build
+docker compose config --quiet
+docker compose up -d --build frontend
+dotnet build .\MicroservicesLab.sln
+dotnet test .\MicroservicesLab.sln --no-build
+cd .\src\services\PriceFeed.Service
+go test ./...
+cd ..\Payment.Service
+go test ./...
+```
+
+Resultado da validacao:
+
+- build Angular local: aprovado com `pnpm build`;
+- `docker compose config --quiet`: aprovado;
+- `docker compose up -d --build frontend`: aprovado, com `frontend` publicado em `http://localhost:4200`;
+- `dotnet build .\MicroservicesLab.sln`: aprovado, 0 warnings, 0 errors;
+- `dotnet test .\MicroservicesLab.sln --no-build`: aprovado, 32/32 testes;
+- `go test ./...` em `PriceFeed.Service`: aprovado;
+- `go test ./...` em `Payment.Service`: aprovado;
+- smoke via Docker/Nginx: `GET http://127.0.0.1:4200/observabilidade` retornou HTTP 200;
+- health checks via proxy do front-end retornaram HTTP 200 para Order, Inventory, PriceFeed, Pricing e Audit;
+- Grafana, Prometheus e Jaeger responderam HTTP 200 nas portas publicadas;
+- `Payment.Service` permanece sem health HTTP e e exibido como nao monitorado.
 
 ## FASE 27 - Precos realtime (SSE)
 
