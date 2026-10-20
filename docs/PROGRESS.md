@@ -1,10 +1,11 @@
 # Progresso
 
-O laboratorio esta organizado em tres partes:
+O laboratorio esta organizado em quatro partes:
 
 - Parte I - Microservices Fundamentals: Fases 0-12.
 - Parte II - Realtime Distributed Systems: Fases 13-22, iniciada na FASE 13 depois do fechamento da Parte I.
-- Parte III - Application / Front-end: Fases 23-31, iniciada na FASE 23.
+- Parte III - Aplicacao Angular: Fases 23-30 concluidas; Fase 31 planejada para temas e personalizacao visual.
+- Parte IV - Consistencia distribuida: Fase 32 planejada; diagnostico da antiga Fase 31 preservado, sem implementacao.
 
 ## Parte I - Microservices Fundamentals
 
@@ -41,7 +42,7 @@ O laboratorio esta organizado em tres partes:
 | 21 | Realtime observability | Pendente |
 | 22 | Load e chaos testing | Pendente |
 
-## Parte III - Application / Front-end
+## Parte III - Aplicacao Angular
 
 | Fase | Descricao | Status |
 | ---- | --------- | ------ |
@@ -54,12 +55,81 @@ O laboratorio esta organizado em tres partes:
 | 29.1 | Testes automatizados Angular | Concluido |
 | 29.2 | Testes integrados e cenarios de falha | Concluido |
 | 29.3 | Revisao tecnica e documentacao | Concluido |
-| 30 | Responsividade e ajustes visuais Angular | Em execucao |
-| 31 | Consistencia entre pedidos e estoque | Pendente |
+| 30 | Responsividade e ajustes visuais Angular | Concluido |
+| 31 | Temas e personalizacao visual | Pendente |
+
+## Parte IV - Consistencia distribuida
+
+| Fase | Descricao | Status |
+| ---- | --------- | ------ |
+| 32 | Consistencia entre pedidos e estoque | Pendente |
+
+## Reorganizacao do roadmap
+
+Fases 23-30 consolidadas como concluidas por confirmacao do usuario. A antiga Fase 31 realizou apenas diagnostico e alterou somente ROADMAP/PROGRESS; nao implementou codigo de aplicacao. As alteracoes documentais locais preexistentes foram preservadas e reorganizadas, sem descarte ou reversao. O historico recente identifica as alteracoes Angular da Fase 30 no commit 58c5e74, anterior a analise de consistencia.
+
+Nesta reorganizacao foram alterados somente estes dois documentos. Nenhuma funcionalidade, contrato, migration ou teste de aplicacao foi implementado/executado. Sem git add, commit, push ou troca de branch; novas Fases 31 e 32 nao iniciadas.
+
+## FASE 31 - Temas e personalizacao visual
+
+Status: Pendente; nao iniciada. Escopo planejado da Parte III:
+
+- Temas claro, escuro e automatico.
+- Cores de destaque personalizaveis.
+- Persistencia local das preferencias.
+- Testes dos temas, personalizacao e persistencia.
+
+## FASE 32 - Diagnostico preservado de consistencia distribuida
+
+Status: Pendente; implementacao da nova Fase 32 nao iniciada. A analise abaixo foi realizada em 20/10/2026 sob a numeracao antiga (Fase 31) e interrompida antes de modificar codigo, conforme a condicao explicita daquele pedido. As decisoes de desenho concreto continuam pendentes; a reorganizacao apenas transfere o escopo e preserva o diagnostico.
+
+Escopo integral transferido para a Parte IV: reservas atomicas e identificadas, concorrencia, idempotencia, outbox minima, deduplicacao de pagamentos, compensacao, migrations e recuperacao de falhas. Nenhum desses itens foi implementado nesta reorganizacao.
+
+Inspecao limitada a Order, Inventory, Payment, contratos gRPC/Kafka e testes relevantes. AGENTS.md seguido; branch feature/part-3 e working tree inicialmente limpa.
+
+Evidencias no codigo atual:
+
+- Order/Services/OrdersAppService.cs: CreateAsync consulta CheckAvailability, salva o pedido e depois publica OrderCreated (SaveChangesAsync antes de PublishAsync). Nao ha registro duravel da publicacao pendente.
+- Inventory/Services/InventoryAppService.cs: ReserveStockAsync le o produto, chama Product.Reserve e salva. InventoryDbContext nao define token de concorrencia nem uma reserva identificada. Duas chamadas podem ler saldo 5, reservar 4 cada e gravar saldo 1: saldo nao negativo nao significa que as 8 unidades aceitas tenham sido contabilizadas corretamente. Este e um interleaving possivel por inspecao, nao um teste executado.
+- src/protos/inventory.proto: ReserveStockRequest possui somente product_id/quantity; faltam identidade da operacao e consulta/liberacao idempotente. IInventoryClient expoe somente CheckAvailabilityAsync.
+- Payment/internal/kafka/order_created_consumer.go: processa/publica antes de CommitMessages. Payment/internal/processing/payment_processor.go gera PaymentId e EventId de saida novos, sem decisao persistida; reentrega pode gerar outro resultado, inclusive diferente se a configuracao de aprovacao mudar entre tentativas.
+- Order/Services/PaymentEventsAppService.cs: atualiza somente o status, sem compensar estoque nem registrar eventos recebidos. Order ignora reaplicacao do mesmo status final, mas isso nao e deduplicacao duravel por evento/operacao; status conflitante lanca erro.
+- CreateOrderRequest possui productId/quantity; o POST atual nao recebe identidade estavel para distinguir retry do cliente de outra compra legitima com o mesmo corpo.
+
+Janelas relevantes (riscos ALTOS; nao provocados no ambiente):
+
+| Cenario | Por que uma correcao apenas local nao basta |
+| --- | --- |
+| Reserva concluida, resposta gRPC perdida | Retry sem chave pode baixar duas vezes. Mesmo com chave, precisa consultar/repetir a mesma operacao e retomar o fluxo |
+| Processo cai apos reservar e antes de salvar o pedido | Reserva pode ficar orfa; finally/catch nao executam apos queda. Exige intencao duravel anterior a chamada e recuperacao/reconciliacao |
+| Pedido salvo, publicacao Kafka falha | Pedido pode ficar sem pagamento e reserva retida; exige publicacao pendente recuperavel, atomica com o estado local |
+| Kafka aceitou a mensagem, mas confirmacao se perdeu | Liberar estoque no catch pode permitir pagamento de pedido com estoque devolvido. Resultado e indeterminado, nao falha de negocio confirmada |
+| Pagamento rejeitado e devolucao concluida antes de queda | Reentrega pode devolver duas vezes; transicao da reserva e incremento do saldo devem ser uma transacao local idempotente |
+| Status rejeitado salvo antes de devolver estoque | Reentrega pode ser ignorada por status ja final e nunca realizar a devolucao. Precisa registrar e recuperar compensacao pendente |
+| Pagamento publicado, commit do offset falha | Reentrega nao pode decidir/processar novamente como nova operacao. Persistir resultado e sua entrega, ou avaliar alternativa transacional Kafka, antes de alterar o consumer |
+
+Decisao requerida, sem implementacao automatica:
+
+1. Recomendada: autorizar um fluxo duravel minimo e consistencia eventual recuperavel. Registrar a intencao antes do gRPC; manter OrderId/operacao estavel; reservar com UPDATE condicional/lock e registro unico na mesma transacao; persistir pedido e publicacao pendente na mesma transacao local; recuperar operacoes/publicacoes apos queda; deduplicar resultado do pagamento; liberar reserva uma unica vez, com compensacao duravel e controle de transicoes terminais. Evitar frameworks, coordenador generico ou Saga/Outbox completos, mas reconhecer que registro de entrega duravel equivale ao nucleo de uma outbox.
+2. Alternativa de escopo reduzido: implementar apenas atomicidade/idempotencia da reserva no Inventory, sem integrar um fluxo distribuido com garantias incompletas. Nao atende a todos os criterios desta fase; exige aceite explicito do escopo menor.
+
+A opcao 1 exige migrations para registros duraveis/constraints, evolucao aditiva do gRPC e definicao da identidade de retries HTTP. Identidades iguais com productId/quantity diferentes devem ser rejeitadas. A decisao de persistencia/transacao do Payment precisa ser aprovada, pois hoje ele nao possui armazenamento proprio. Nao compartilhar tabelas entre servicos como atalho.
+
+O alvo seria atomicidade local e consistencia eventual com retomada, nao transacao atomica global nem disponibilidade garantida durante uma particao permanente. Dados/volumes precisam ser preservados e dependencias/processos de recuperacao precisam voltar a operar. Expirar ou devolver automaticamente por timeout, gerar IDs deterministas sem congelar o resultado, ou deduplicar apenas em memoria nao fecham as janelas acima.
+
+Validacao prevista para a implementacao, ainda NAO executada:
+
+- Concorrencia com conexoes/transacoes independentes no PostgreSQL real e saldo limitado; reservas aceitas + saldo final devem corresponder ao saldo inicial.
+- Mesma operacao simultanea/repetida, parametros divergentes, timeout apos commit e reinicio de processos.
+- Pagamento aprovado preserva baixa; rejeitado libera uma unica vez; duplicatas, falhas antes/depois de devolver e eventos conflitantes nao corrompem saldo.
+- Publicacao nao realizada, confirmacao Kafka perdida, falha antes/depois de commit de offsets e recuperacao de operacoes duraveis.
+- Testes direcionados .NET/Go e integracao isolada somente para essas fronteiras. Os testes atuais .NET usam EF InMemory e nao demonstram concorrencia/transacoes PostgreSQL; os testes Go do processor cobrem decisoes de aprovacao/rejeicao, nao deduplicacao recuperavel.
+
+Alteracoes da analise original (antiga Fase 31, agora incorporada ao planejamento da Fase 32): somente docs/ROADMAP.md e docs/PROGRESS.md. Nenhum codigo, contrato, migration, Angular, banco, volume ou servico em execucao alterado. Sem testes de aplicacao desnecessarios: apenas revisao documental e diff. Sem git add, commit ou push; nenhuma fase seguinte iniciada.
 
 ## FASE 30 - Responsividade Angular
 
-Status: Em execucao (20/10/2026), conforme o status pedido; implementacao e validacoes desta entrega realizadas. Fase 31 pendente.
+Status: Concluido. Implementacao e validacoes realizadas em 20/10/2026; status consolidado na reorganizacao por confirmacao do usuario. As novas Fases 31 (temas) e 32 (consistencia distribuida) permanecem pendentes.
 
 Diagnostico inicial:
 
@@ -131,7 +201,7 @@ Status: Concluido (20/10/2026).
 - O smoke usa a imagem frontend ja em execucao. A correcao nova foi validada por testes/build locais; nao foi feito deploy/reinicio de containers ou cold start.
 - Evidencias invasivas continuam sendo as da Fase 29.2; Kafka nao foi interrompido.
 - Sem alteracao de regras de negocio, contratos, migrations, processamento Kafka, layout ou Kubernetes.
-- Sem staging, commit ou push. Fases 30 e 31 pendentes; Fases 17-22 nao incorporadas.
+- Sem staging, commit ou push naquela entrega. Naquele momento, Fases 30 e antiga 31 pendentes; a antiga 31 corresponde agora a Fase 32. Fases 17-22 nao incorporadas.
 
 ## FASE 29.2 - Testes integrados e cenarios de falha
 
@@ -149,7 +219,7 @@ Status: Concluido (20/10/2026).
 - Relatorio detalhado e JSONs registram evidencias; os resultados originais do usuario foram preservados.
 - Telas Angular verificadas com pedido atual, filtro de auditoria e payload real. Reconexao SSE comprovada na mesma sessao: Conectado -> Reconectando -> Conectado, com novos eventos e sem reload.
 - Corrigido bug do cliente SSE: EventSource CLOSED apos handshake 502 agora permite nova tentativa apos 3s; unsubscribe cancela a tentativa pendente. Suite Angular passou com 24/24; builds local/Docker aprovados.
-- Kafka nao sera interrompido por risco conhecido de SaveChanges antes de publicacao. Consistencia segue pendente da Fase 31.
+- Kafka nao sera interrompido por risco conhecido de SaveChanges antes de publicacao. Consistencia segue pendente da Fase 32 (antiga Fase 31).
 - Nenhum commit, staging, push, migration, contrato ou regra de negocio alterado naquela execucao. Revisao posterior: Fase 29.3 acima.
 
 ## Regra de execucao
@@ -1360,9 +1430,9 @@ Conclusao:
 - o `Inventory.Service` ja implementa reserva via HTTP e gRPC;
 - o `Order.Service` atualmente usa somente `CheckAvailability`;
 - a reserva atual nao possui idempotencia nem protecao explicita contra concorrencia;
-- a integracao segura da reserva foi adiada para a FASE 31.
+- a integracao segura da reserva foi adiada para a antiga FASE 31, agora FASE 32.
 
-Pendencia futura da FASE 31:
+Pendencia futura da FASE 32 (antiga FASE 31):
 
 - reserva atomica;
 - idempotencia;

@@ -41,7 +41,7 @@ Entre a FASE 14 e a FASE 15 existe um mini-lab concluido de gRPC Server Streamin
 | 21 | Realtime observability | Pendente |
 | 22 | Load e chaos testing | Pendente |
 
-## Parte III - Application / Front-end
+## Parte III - Aplicacao Angular
 
 A Parte III adiciona uma aplicacao Angular para interagir com o laboratorio. A interface deve ser um painel tecnico e demonstravel, nao um ERP ou produto comercial.
 
@@ -56,8 +56,8 @@ A Parte III adiciona uma aplicacao Angular para interagir com o laboratorio. A i
 | 29.1 | Testes automatizados Angular | Concluido |
 | 29.2 | Testes integrados e cenarios de falha | Concluido |
 | 29.3 | Revisao tecnica e documentacao | Concluido |
-| 30 | Responsividade e ajustes visuais Angular | Em execucao |
-| 31 | Consistencia entre pedidos e estoque | Pendente |
+| 30 | Responsividade e ajustes visuais Angular | Concluido |
+| 31 | Temas e personalizacao visual | Pendente |
 
 ## Objetivo da Parte III
 
@@ -71,7 +71,7 @@ Construir uma aplicacao front-end simples e funcional para operar os fluxos ja e
 
 O front-end deve consumir as APIs existentes sem introduzir API Gateway, BFF, autenticacao ou novas regras de negocio antes de haver necessidade concreta.
 
-## Planejamento das Fases 23-29
+## Planejamento das Fases 23-31
 
 | Fase | Nome | Objetivo principal | Status |
 | ---- | ---- | ------------------ | ------ |
@@ -84,8 +84,8 @@ O front-end deve consumir as APIs existentes sem introduzir API Gateway, BFF, au
 | 29.1 | Testes automatizados Angular | Configurar testes unitarios/comportamentais do front-end sem depender de servicos externos. | Concluido |
 | 29.2 | Testes integrados e cenarios de falha | Validar fluxos integrados e falhas controladas do laboratorio. | Concluido |
 | 29.3 | Revisao tecnica e documentacao | Revisar a Parte III e consolidar documentacao tecnica. | Concluido |
-| 30 | Responsividade e ajustes visuais Angular | Ajustar a experiencia visual e responsiva da aplicacao. | Em execucao |
-| 31 | Consistencia entre pedidos e estoque | Avaliar reserva, idempotencia e compensacao de estoque. | Pendente |
+| 30 | Responsividade e ajustes visuais Angular | Ajustar a experiencia visual e responsiva da aplicacao. | Concluido |
+| 31 | Temas e personalizacao visual | Temas claro, escuro e automatico, cores de destaque personalizaveis, persistencia local e testes. | Pendente |
 
 ### Fase 28.1 - Auditoria
 
@@ -127,7 +127,7 @@ Escopo:
 
 A Fase 29.2 possui script e relatorio em [INTEGRATION_TESTS.md](INTEGRATION_TESTS.md).
 As regressoes e 8 cenarios automatizados integrados passaram. O bloqueio inicial do Docker foi resolvido; telas Angular e reconexao EventSource foram verificadas no navegador apos correcao da recuperacao SSE. A interrupcao do Kafka foi omitida pelo risco conhecido de consistencia.
-Fase 29.2 concluida. A revisao posterior esta registrada abaixo; Fase 30 em execucao e Fase 31 pendente.
+Fases 23-30 concluidas. A nova Fase 31 (temas) e a Fase 32 (consistencia distribuida) permanecem pendentes.
 
 ### Fase 29.3 - Revisao tecnica e documentacao
 
@@ -139,14 +139,25 @@ README consolidado; guias e diagramas atualizados; evidencias historicas preserv
 
 ### Fase 30 - Responsividade Angular
 
-Status: Em execucao, conforme solicitado para esta entrega.
+Status: Concluido, consolidado conforme confirmacao do usuario na reorganizacao do roadmap.
 
 - Implementados grids adaptativos, formularios e textos sem overflow global nas seis telas.
 - Menu mobile recolhivel ate 820px, com aria-expanded, foco, Escape e fechamento ao navegar; sidebar desktop preservada.
 - Tabelas com scroll localizado acessivel por teclado; payload JSON preserva formatacao e scroll proprio.
 - Navegador verificado em 360, 390, 430, 768, 1024, 1280 e 1920px, sem instalar ferramentas E2E.
 - Evidencias, limitacoes e checklist manual: [PROGRESS](PROGRESS.md#fase-30---responsividade-angular). Dispositivos fisicos/teclados virtuais nao validados.
-- Sem alteracoes de backend, contratos, polling, SSE ou regras de negocio. Fase 31 nao iniciada.
+- Sem alteracoes de backend, contratos, polling, SSE ou regras de negocio. Novas Fases 31 e 32 nao iniciadas.
+
+### Fase 31 - Temas e personalizacao visual
+
+Status: Pendente; nao iniciada.
+
+- Temas claro, escuro e automatico.
+- Cores de destaque personalizaveis.
+- Persistencia local das preferencias.
+- Testes dos comportamentos implementados futuramente.
+
+Esta fase pertence a Parte III e nao inclui consistencia entre pedidos e estoque.
 
 ### Pendencias tecnicas preservadas
 
@@ -155,15 +166,36 @@ Status: Em execucao, conforme solicitado para esta entrega.
 - Interrupcao Kafka nao executada por risco operacional de persistir pedido antes de publicar.
 - Outros riscos localizados e lacunas de testes registrados na revisao 29.3, sem criar fases adicionais.
 
-### Pendencia futura da Fase 31
+## Parte IV - Consistencia distribuida
 
-Avaliar e implementar a consistencia entre pedidos e estoque sem alterar o comportamento atual da FASE 26:
+| Fase | Descricao | Status |
+| ---- | --------- | ------ |
+| 32 | Consistencia entre pedidos e estoque | Pendente |
 
-- reserva atomica de estoque;
+### Fase 32 - Consistencia entre pedidos e estoque
+
+Status: Pendente; implementacao nao iniciada. O escopo e o diagnostico tecnico da antiga Fase 31 foram transferidos integralmente para esta fase. A reorganizacao nao autoriza implementacao automatica nem decide o desenho de persistencia/recuperacao.
+
+Reserva atomica e idempotente no Inventory e viavel com alteracoes locais, mas nao resolve as janelas entre gRPC, bancos independentes e Kafka. Timeout nao comprova que a operacao falhou. Compensacao apenas em catch pode devolver estoque de pedido ja publicado/pago.
+
+Para atender ao fluxo completo e necessario decidir sobre intencoes/estados duraveis, recuperacao apos reinicio, publicacao pendente persistida com o pedido e deduplicacao duravel do pagamento. Isso e mudanca arquitetural relevante, ainda nao autorizada como desenho concreto; nao foi implementado parcialmente.
+
+Alternativas para decisao:
+- Recomendada: fluxo duravel minimo, com reservas identificadas por operacao, transacoes locais, registro recuperavel de publicacoes/compensacoes e resultado de pagamento idempotente; sem framework de Saga ou plataforma Outbox completa. Requer migrations, evolucao aditiva de contratos e mecanismo de recuperacao.
+- Escopo reduzido: somente reserva atomica/idempotente local. Nao atende a Fase 32 completa e nao deve ser apresentada como consistencia distribuida garantida.
+
+Evidencias, cenarios e validacao necessaria, preservados da antiga Fase 31: [PROGRESS](PROGRESS.md#fase-32---diagnostico-preservado-de-consistencia-distribuida).
+
+Objetivos preservados, ainda nao implementados:
+
+- reservas atomicas e identificadas;
+- concorrencia e consistencia da quantidade disponivel;
 - idempotencia;
+- outbox minima;
+- deduplicacao de pagamentos;
 - compensacao de estoque em pagamento rejeitado ou falhas;
-- concorrencia;
-- tratamento de falhas distribuidas.
+- migrations para registros duraveis e constraints;
+- recuperacao de falhas, timeouts, reentregas e operacoes/publicacoes pendentes.
 
 ## Objetivo da Parte II
 
