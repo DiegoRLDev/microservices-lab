@@ -146,6 +146,13 @@ Na tentativa inicial, o script retornou 1 nas pre-condicoes. A sintaxe e o helpe
 3. Executar os scripts acima e revisar cada resultado, sem ignorar falhas de restore.
 4. Se um teste for interrompido externamente, usar `docker compose start <servico>` para o servico afetado e confirmar health/fluxo antes de outro cenario.
 5. Validar no navegador `/pedidos`, `/auditoria` e `/precos`; usar IDs da execucao atual. Manter a pagina de precos aberta durante uma parada/restauracao controlada do PriceFeed e confirmar reconexao real do EventSource.
-6. Registrar novas evidencias se repetir os cenarios. A Fase 29.2 foi concluida com os resultados atuais; Fase 29.3 nao foi iniciada.
+6. Registrar novas evidencias se repetir os cenarios. A Fase 29.2 foi concluida com os resultados acima; a revisao posterior da Fase 29.3 esta em [TECHNICAL_REVIEW.md](TECHNICAL_REVIEW.md).
+
+## Revisao posterior - Fase 29.3
+
+A matriz de oito cenarios e evidencia historica da Fase 29.2, nao uma nova execucao. Nesta revisao foram executadas regressoes e smoke tests somente leitura, sem parar servicos, criar produtos/pedidos ou interromper Kafka.
+Os testes Angular de health agora cobrem timeout/cancelamento em 5s e consulta posterior; a suite passou com 26/26. O Compose passa a interromper kafka-init em erro e aguardar o container Audit antes do frontend.
+Essa ordenacao nao equivale a readiness nem comprova recuperacao apos recriacao de upstreams com IP diferente. Nao foi repetido cold start nem falha controlada.
+Detalhes dos comandos, resultados e limites de cobertura estao no relatorio tecnico.
 
 Nao executar `down -v`, remocao de volumes, prune, DROP, TRUNCATE ou DELETE em massa. SSE e REST seguem caminhos diferentes; nao exigir igualdade instantanea dos precos.

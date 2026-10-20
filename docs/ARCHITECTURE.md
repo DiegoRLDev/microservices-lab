@@ -2,11 +2,59 @@
 
 Este documento registra as principais decisoes arquiteturais do laboratorio.
 
-O laboratorio agora esta organizado em duas partes:
+O laboratorio esta organizado em tres partes:
 
 - Parte I - Microservices Fundamentals: Fases 0-12.
 - Parte II - Realtime Distributed Systems: Fases 13-22, iniciada depois da conclusao da Parte I.
-- Parte III - Application / Front-end: Fases 23-29, iniciada com uma aplicacao Angular para operar o laboratorio.
+- Parte III - Application / Front-end: Fases 23-31, com painel Angular ate 29.3; responsividade e consistencia ainda pendentes.
+
+## Fluxos atuais (revisao 29.3)
+
+```mermaid
+flowchart LR
+    UI[Angular / Nginx] -->|POST /orders| Order[Order.Service]
+    Order -->|gRPC CheckAvailability| Inventory[Inventory.Service]
+    Inventory --> InventoryDb[(inventory_db)]
+    Order -->|SaveChanges Pending| OrderDb[(order_db)]
+    Order -->|OrderCreated| Kafka[(Kafka)]
+    Kafka -->|order-created| Payment[Payment.Service Go]
+    Payment -->|PaymentApproved / PaymentRejected| Kafka
+    Kafka -->|eventos pagamento| Order
+    Kafka -->|tres topicos de negocio| Audit[Audit.Worker]
+    Audit --> AuditDb[(audit_db)]
+    UI -->|GET /orders/id polling| Order
+    UI -->|GET /audit-events| Audit
+```
+
+A consulta de disponibilidade nao reserva estoque. SaveChanges precede publish, sem transacao distribuida. O polling Angular e de 2,5s, sem sobreposicao automatica via exhaustMap, para em status final, cinco falhas consecutivas ou destruicao da tela. Nao ha prazo total para um Pending respondendo com sucesso.
+
+```mermaid
+flowchart LR
+    Mock[MockPriceProvider] --> Feed[PriceFeed Go / MultiPublisher]
+    Feed --> Console[Console]
+    Feed --> Broadcaster[Broadcaster]
+    Broadcaster -->|SSE price-update| UI[Angular]
+    Broadcaster -->|gRPC StreamPrices opcional| Lab[Pricing modo lab / logs]
+    Feed -->|PriceUpdated / key symbol| Kafka[(Kafka price-updated)]
+    Kafka --> Pricing[Pricing Kafka consumer]
+    Pricing --> Store[LatestPriceStore em memoria]
+    UI -->|REST snapshot| Pricing
+```
+
+No Compose, o modo gRPC lab de Pricing esta desabilitado. SSE nao vem do Kafka; REST e SSE nao sao snapshots sincronizados. PriceFeed usa centavos inteiros; produtos/pedidos usam valores decimais em unidades monetarias. Angular divide somente os precos realtime por 100.
+
+```mermaid
+flowchart LR
+    Apps[Order / Inventory / Payment / Audit] -->|traces e metricas OTLP| Collector[OpenTelemetry Collector]
+    Collector -->|traces OTLP| Jaeger[Jaeger]
+    Prometheus[Prometheus] -->|scrape :9464| Collector
+    Grafana[Grafana] -->|queries| Prometheus
+    UI[Angular] -->|health HTTP e links externos| Apps
+```
+
+Payment nao possui health HTTP: a tela o mostra como nao monitorado. PriceFeed e Pricing possuem health, mas nao instrumentacao OTLP nesta branch. Logs permanecem no console, sem pipeline de logs no Collector. Health de Order/Inventory/Audit consulta banco; Pricing e PriceFeed nao verificam Kafka. Health Docker das APIs .NET verifica apenas TCP.
+
+Contratos, evidencias, limites de recuperacao e pendencias: [revisao tecnica](TECHNICAL_REVIEW.md) e [testes integrados](INTEGRATION_TESTS.md). As secoes por fase abaixo preservam a evolucao historica; itens planejados nao significam implementacao nesta branch.
 
 ## Servicos
 
@@ -102,6 +150,7 @@ Durante desenvolvimento local, `proxy.conf.json` encaminha as chamadas relativas
 /api/inventory  -> http://localhost:5276
 /api/pricefeed  -> http://localhost:5080
 /api/pricing    -> http://localhost:5090
+/api/audit      -> http://localhost:5288
 ```
 
 No Docker Compose, o front-end e servido por Nginx em `http://localhost:4200`, com proxy interno para os nomes dos servicos:
@@ -111,6 +160,7 @@ No Docker Compose, o front-end e servido por Nginx em `http://localhost:4200`, c
 /api/inventory  -> http://inventory-service:8080
 /api/pricefeed  -> http://pricefeed-service:8080
 /api/pricing    -> http://pricing-service:8080
+/api/audit      -> http://audit-worker:8080
 ```
 
 Essa escolha evita CORS no desenvolvimento inicial sem introduzir API Gateway ou BFF na FASE 23.
@@ -198,11 +248,9 @@ O contrato e simples de proposito: `price` permanece em centavos (`int64`), e o 
 
 ## Idempotencia
 
-Os consumidores Kafka manterao um registro simples de eventos processados, usando `EventId` como chave. Antes de aplicar efeito colateral, o consumidor verificara se o evento ja foi processado.
+Somente Audit possui deduplicacao persistente por `EventId`: `audit_events.event_id` e unico e o processador reconhece eventos ja registrados antes do commit Kafka.
 
-No laboratorio, isso sera propositalmente didatico: uma tabela local por consumidor e suficiente para mostrar o conceito sem introduzir uma infraestrutura mais complexa.
-
-Na FASE 7, essa regra ja aparece no `Audit.Worker`: `audit_events.event_id` e unico, e o processador ignora mensagens cujo `EventId` ja tenha sido registrado.
+Order ignora a reaplicacao do mesmo status final, mas nao possui inbox de EventIds; evento conflitante pode falhar. Payment publica antes do commit, sem persistencia propria nem deduplicacao duravel; reentrega pode produzir novo evento. A idempotencia do producer Order nao torna SaveChanges e Kafka atomicos. Nao ha exactly-once ponta a ponta.
 
 ## Resiliencia
 
@@ -226,7 +274,7 @@ Na FASE 10, o projeto foi instrumentado com OpenTelemetry para correlacionar uma
 - publicacao e consumo de eventos Kafka;
 - logs estruturados com `TraceId`, `OrderId`, `ProductId`, `PaymentId` e `EventId`.
 
-O ambiente Docker Compose inclui OpenTelemetry Collector, Jaeger, Prometheus e Grafana. Os servicos exportam traces e metricas via OTLP, e o contexto distribuido atravessa Kafka por headers W3C `traceparent`/`tracestate`, sem alterar o payload dos eventos.
+O ambiente Docker Compose inclui OpenTelemetry Collector, Jaeger, Prometheus e Grafana. Order, Inventory, Payment e Audit exportam traces e metricas via OTLP; no fluxo de negocio, o contexto distribuido atravessa Kafka por headers W3C `traceparent`/`tracestate`, sem alterar o payload dos eventos. PriceFeed/Pricing nao possuem essa instrumentacao.
 
 O dashboard provisionado em Grafana acompanha requisicoes HTTP, duracao, pedidos criados/rejeitados, pagamentos aprovados/rejeitados e falhas da dependencia Inventory.
 

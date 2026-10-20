@@ -1,5 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
+import { timeout } from 'rxjs';
 import { API_ENDPOINTS } from './api-endpoints';
 
 export interface ServiceHealthTarget {
@@ -68,10 +69,10 @@ export class LabHealthService {
   ];
 
   check(target: ServiceHealthTarget) {
-    return this.http.get(target.url, { responseType: 'text' });
+    return this.checkUrl(target.url);
   }
 
   checkUrl(url: string) {
-    return this.http.get(url, { responseType: 'text' });
+    return this.http.get(url, { responseType: 'text' }).pipe(timeout(5000));
   }
 }

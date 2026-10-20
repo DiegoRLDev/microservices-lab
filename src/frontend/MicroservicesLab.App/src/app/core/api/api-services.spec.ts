@@ -151,4 +151,27 @@ describe('Angular API services', () => {
     expect(request.request.method).toBe('GET');
     request.flush('Healthy');
   });
+
+  it.each(['check', 'checkUrl'] as const)('cancels a stalled health request through %s and allows a later check', (method) => {
+    vi.useFakeTimers();
+    try {
+      const service = TestBed.inject(LabHealthService);
+      const error = vi.fn();
+      const response = method === 'check'
+        ? service.check({ name: 'Order.Service', url: '/api/order/health' })
+        : service.checkUrl('/api/order/health');
+
+      response.subscribe({ error });
+      const stalled = http.expectOne('/api/order/health');
+      vi.advanceTimersByTime(5000);
+      expect(stalled.cancelled).toBe(true);
+      expect(error).toHaveBeenCalledOnce();
+      expect(error.mock.calls[0][0].name).toBe('TimeoutError');
+
+      service.checkUrl('/api/order/health').subscribe((body) => expect(body).toBe('Healthy'));
+      http.expectOne('/api/order/health').flush('Healthy');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

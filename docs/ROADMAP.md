@@ -55,7 +55,7 @@ A Parte III adiciona uma aplicacao Angular para interagir com o laboratorio. A i
 | 28 | Auditoria e observabilidade | Concluido |
 | 29.1 | Testes automatizados Angular | Concluido |
 | 29.2 | Testes integrados e cenarios de falha | Concluido |
-| 29.3 | Revisao tecnica e documentacao | Pendente |
+| 29.3 | Revisao tecnica e documentacao | Concluido |
 | 30 | Responsividade e ajustes visuais Angular | Pendente |
 | 31 | Consistencia entre pedidos e estoque | Pendente |
 
@@ -83,7 +83,7 @@ O front-end deve consumir as APIs existentes sem introduzir API Gateway, BFF, au
 | 28 | Auditoria e observabilidade | Expor auditoria e links/leituras operacionais sem substituir Jaeger, Prometheus ou Grafana. | Concluido |
 | 29.1 | Testes automatizados Angular | Configurar testes unitarios/comportamentais do front-end sem depender de servicos externos. | Concluido |
 | 29.2 | Testes integrados e cenarios de falha | Validar fluxos integrados e falhas controladas do laboratorio. | Concluido |
-| 29.3 | Revisao tecnica e documentacao | Revisar a Parte III e consolidar documentacao tecnica. | Pendente |
+| 29.3 | Revisao tecnica e documentacao | Revisar a Parte III e consolidar documentacao tecnica. | Concluido |
 | 30 | Responsividade e ajustes visuais Angular | Ajustar a experiencia visual e responsiva da aplicacao. | Pendente |
 | 31 | Consistencia entre pedidos e estoque | Avaliar reserva, idempotencia e compensacao de estoque. | Pendente |
 
@@ -127,7 +127,30 @@ Escopo:
 
 A Fase 29.2 possui script e relatorio em [INTEGRATION_TESTS.md](INTEGRATION_TESTS.md).
 As regressoes e 8 cenarios automatizados integrados passaram. O bloqueio inicial do Docker foi resolvido; telas Angular e reconexao EventSource foram verificadas no navegador apos correcao da recuperacao SSE. A interrupcao do Kafka foi omitida pelo risco conhecido de consistencia.
-Fase 29.2 concluida. Fases 29.3, 30 e 31 permanecem pendentes.
+Fase 29.2 concluida. A revisao posterior esta registrada abaixo; Fases 30 e 31 permanecem pendentes.
+
+### Fase 29.3 - Revisao tecnica e documentacao
+
+Status: Concluido (20/10/2026).
+
+Revisao dos seis servicos, Angular, contratos, Compose, testes e documentacao: [relatorio tecnico](TECHNICAL_REVIEW.md).
+Correcoes localizadas: timeout de health HTTP, dependencia do frontend para Audit e shell fail-fast de kafka-init. Sem mudancas de negocio, contratos, processamento Kafka, layout ou Kubernetes.
+README consolidado; guias e diagramas atualizados; evidencias historicas preservadas em PROGRESS e INTEGRATION_TESTS.
+
+### Fase 30 - Responsividade Angular
+
+Status: Pendente.
+
+- Layout responsivo e navegacao mobile.
+- Tabelas/grids, formularios e ajustes visuais.
+- Verificacao em desktop, tablet e celular.
+
+### Pendencias tecnicas preservadas
+
+- Payment.Service sem health HTTP; avaliar futuramente sua organizacao idiomatica Go, sem assumir defeito.
+- Recuperacao observada na Fase 29.2 nao garante recuperacao de erros fatais, exactly-once ou snapshot duravel do Pricing.
+- Interrupcao Kafka nao executada por risco operacional de persistir pedido antes de publicar.
+- Outros riscos localizados e lacunas de testes registrados na revisao 29.3, sem criar fases adicionais.
 
 ### Pendencia futura da Fase 31
 

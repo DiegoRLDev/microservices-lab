@@ -1,10 +1,10 @@
 # Progresso
 
-O laboratorio esta organizado em duas partes:
+O laboratorio esta organizado em tres partes:
 
 - Parte I - Microservices Fundamentals: Fases 0-12.
 - Parte II - Realtime Distributed Systems: Fases 13-22, iniciada na FASE 13 depois do fechamento da Parte I.
-- Parte III - Application / Front-end: Fases 23-29, iniciada na FASE 23.
+- Parte III - Application / Front-end: Fases 23-31, iniciada na FASE 23.
 
 ## Parte I - Microservices Fundamentals
 
@@ -53,9 +53,27 @@ O laboratorio esta organizado em duas partes:
 | 28 | Auditoria e observabilidade | Concluido |
 | 29.1 | Testes automatizados Angular | Concluido |
 | 29.2 | Testes integrados e cenarios de falha | Concluido |
-| 29.3 | Revisao tecnica e documentacao | Pendente |
+| 29.3 | Revisao tecnica e documentacao | Concluido |
 | 30 | Responsividade e ajustes visuais Angular | Pendente |
 | 31 | Consistencia entre pedidos e estoque | Pendente |
+
+## FASE 29.3 - Revisao tecnica e consolidacao da documentacao
+
+Status: Concluido (20/10/2026).
+
+- Branch feature/part-3 confirmada; working tree limpa antes da revisao.
+- Revisados os seis servicos, contratos HTTP/gRPC/Kafka, Angular, Compose, proxies e testes.
+- Achados e recomendacoes: [relatorio tecnico](TECHNICAL_REVIEW.md).
+- Correcoes pequenas: timeout de health de 5s (com cancelamento), dependencia frontend -> Audit e fail-fast no shell de kafka-init.
+- README reduzido a ponto de entrada operacional. Arquitetura com diagramas dos fluxos reais e limites de instrumentacao/idempotencia.
+- Guia local atualizado: Audit HTTP 5288, PriceFeed/Pricing, cinco proxies, portas Go sem conflito com Prometheus, bancos reais e preservacao de volumes.
+- Blocos de validacao anteriormente sob Fases 23/27/28.1 realocados para 23/26.2/27/28.1, sem apagar evidencias; secoes da Parte III ordenadas por fase.
+- Validacoes: Angular 26/26 e build; .NET build (0 warnings/erros) e testes 32/32; Go Payment e PriceFeed; Compose config; helpers PowerShell 5.1 e 7.
+- Smoke somente leitura: seis rotas SPA, cinco healths e quatro consultas de API via Nginx HTTP 200; ferramentas HTTP 200; SSE real; bancos e topicos existentes conferidos.
+- O smoke usa a imagem frontend ja em execucao. A correcao nova foi validada por testes/build locais; nao foi feito deploy/reinicio de containers ou cold start.
+- Evidencias invasivas continuam sendo as da Fase 29.2; Kafka nao foi interrompido.
+- Sem alteracao de regras de negocio, contratos, migrations, processamento Kafka, layout ou Kubernetes.
+- Sem staging, commit ou push. Fases 30 e 31 pendentes; Fases 17-22 nao incorporadas.
 
 ## FASE 29.2 - Testes integrados e cenarios de falha
 
@@ -74,7 +92,7 @@ Status: Concluido (20/10/2026).
 - Telas Angular verificadas com pedido atual, filtro de auditoria e payload real. Reconexao SSE comprovada na mesma sessao: Conectado -> Reconectando -> Conectado, com novos eventos e sem reload.
 - Corrigido bug do cliente SSE: EventSource CLOSED apos handshake 502 agora permite nova tentativa apos 3s; unsubscribe cancela a tentativa pendente. Suite Angular passou com 24/24; builds local/Docker aprovados.
 - Kafka nao sera interrompido por risco conhecido de SaveChanges antes de publicacao. Consistencia segue pendente da Fase 31.
-- Nenhum commit, staging, push, migration, contrato ou regra de negocio alterado. Fase 29.3 nao iniciada.
+- Nenhum commit, staging, push, migration, contrato ou regra de negocio alterado naquela execucao. Revisao posterior: Fase 29.3 acima.
 
 ## Regra de execucao
 
@@ -1165,245 +1183,6 @@ cd ..\Payment.Service
 go test ./...
 ```
 
-Resultado da validacao:
-
-- `dotnet test .\tests\Audit.Worker.Tests\Audit.Worker.Tests.csproj`: aprovado, 7/7 testes;
-- build Angular local: aprovado com `pnpm build`;
-- `docker compose config --quiet`: aprovado;
-- `docker compose up -d --build`: aprovado, incluindo `audit-worker` com HTTP em `http://localhost:5288`;
-- `dotnet build .\MicroservicesLab.sln`: aprovado, 0 warnings, 0 errors;
-- `dotnet test .\MicroservicesLab.sln --no-build`: aprovado, 32/32 testes;
-- `go test ./...` em `PriceFeed.Service`: aprovado;
-- `go test ./...` em `Payment.Service`: aprovado;
-- smoke via Docker/Nginx: `GET http://127.0.0.1:4200/auditoria` retornou HTTP 200;
-- `GET http://127.0.0.1:4200/api/audit/health` retornou HTTP 200;
-- pedido real criado para validacao: `88dc3e3f-a4df-4945-8b3b-851e43f0813e`;
-- pagamento confirmado com transicao `Pending -> Paid`;
-- consulta `GET /api/audit/audit-events?messageKey=88dc3e3f-a4df-4945-8b3b-851e43f0813e&limit=20` retornou 2 eventos reais: `PaymentApproved` e `OrderCreated`;
-- filtro por tipo `eventType=OrderCreated` retornou 1 evento;
-- validacao de duplicidade confirmou que nao houve `EventId` duplicado persistido para o pedido;
-- parametro invalido `limit=999` retornou HTTP 400 com mensagem `limit must be between 1 and 200.`.
-
-## FASE 28.1 - API de consulta de auditoria e interface Angular
-
-Status: Concluido
-
-Arquitetura escolhida:
-
-- a API HTTP foi hospedada no proprio `Audit.Worker`;
-- o consumidor Kafka existente continua sendo o unico consumidor de auditoria;
-- o mesmo `AuditDbContext` consulta `audit_db`;
-- nao foi criado servico separado, API Gateway ou BFF.
-
-Criado/evoluido:
-
-- endpoint `GET /audit-events` no `Audit.Worker`;
-- endpoint `GET /health` no `Audit.Worker`;
-- consulta read-only com `AsNoTracking()`;
-- ordenacao do mais recente para o mais antigo;
-- limite de resultados com maximo de 200 registros;
-- filtros opcionais por `eventType` e `messageKey`;
-- alias `orderId` aceito quando equivalente a `messageKey`;
-- proxy Docker/Nginx e proxy de desenvolvimento em `/api/audit`;
-- tela Angular funcional na rota `/auditoria`;
-- listagem de eventos persistidos;
-- detalhes do evento selecionado;
-- payload completo preservado e formatado quando JSON valido.
-
-Decisoes didaticas:
-
-- o schema do banco nao foi alterado;
-- nenhuma migration foi criada;
-- a idempotencia existente por `EventId` foi preservada;
-- contratos Kafka e regras de pedidos/pagamentos nao foram modificados;
-- nao foi implementado polling automatico, edicao, exclusao ou busca textual complexa.
-
-Validacao:
-
-```powershell
-dotnet test .\tests\Audit.Worker.Tests\Audit.Worker.Tests.csproj
-cd .\src\frontend\MicroservicesLab.App
-pnpm build
-docker compose config --quiet
-docker compose up -d --build
-dotnet build .\MicroservicesLab.sln
-dotnet test .\MicroservicesLab.sln --no-build
-cd .\src\services\PriceFeed.Service
-go test ./...
-cd ..\Payment.Service
-go test ./...
-```
-
-Resultado da validacao:
-
-- build Angular local: aprovado com `pnpm build`;
-- `docker compose config --quiet`: aprovado;
-- `docker compose up -d --build frontend`: aprovado, imagem `microservices-lab-frontend:latest` reconstruida e container iniciado;
-- `dotnet build .\MicroservicesLab.sln`: aprovado, 0 warnings, 0 errors;
-- `dotnet test .\MicroservicesLab.sln --no-build`: aprovado, 27/27 testes;
-- `go test ./...` em `PriceFeed.Service`: aprovado;
-- `go test ./...` em `Payment.Service`: aprovado;
-- smoke via Docker/Nginx: `GET http://127.0.0.1:4200/precos` retornou HTTP 200;
-- snapshot REST via `GET http://127.0.0.1:4200/api/pricing/prices` retornou 5 simbolos;
-- stream SSE via `GET http://127.0.0.1:4200/api/pricefeed/prices/stream` retornou eventos reais `price-update`;
-- em uma janela de 6 segundos, foram observados 60 eventos SSE;
-- exemplo real recebido: `{"symbol":"WEGE3","price":4030,"occurredAt":"2026-10-11T04:18:56.943107183Z"}`;
-- falhas forcadas de servicos nao foram executadas nesta validacao para evitar interromper o ambiente local; a tela mantem REST e SSE em secoes independentes e trata erro por fluxo.
-
-## FASE 28.2 - Interface de observabilidade
-
-Status: Concluido
-
-Criado/evoluido:
-
-- tela funcional na rota `/observabilidade`;
-- health checks reais para `Order.Service`, `Inventory.Service`, `Audit.Worker`, `PriceFeed.Service` e `Pricing.Service`;
-- `Payment.Service` exibido como nao monitorado, porque nao expoe endpoint HTTP de health nesta fase;
-- atualizacao manual da saude dos servicos;
-- polling simples a cada 15 segundos, encerrado ao sair da tela;
-- links para Grafana, Prometheus e Jaeger usando as portas publicadas no host;
-- visao estatica dos fluxos de pedidos, precos e observabilidade;
-- reutilizacao da configuracao central de endpoints do Angular.
-
-Decisoes didaticas:
-
-- nenhum endpoint de health novo foi criado;
-- a tela diferencia servico indisponivel de servico sem monitoramento HTTP;
-- Grafana, Prometheus e Jaeger continuam sendo as ferramentas de observabilidade;
-- a visao arquitetural e informativa e nao representa telemetria em tempo real.
-
-Validacao:
-
-```powershell
-cd .\src\frontend\MicroservicesLab.App
-pnpm build
-docker compose config --quiet
-docker compose up -d --build frontend
-dotnet build .\MicroservicesLab.sln
-dotnet test .\MicroservicesLab.sln --no-build
-cd .\src\services\PriceFeed.Service
-go test ./...
-cd ..\Payment.Service
-go test ./...
-```
-
-Resultado da validacao:
-
-- build Angular local: aprovado com `pnpm build`;
-- `docker compose config --quiet`: aprovado;
-- `docker compose up -d --build frontend`: aprovado, com `frontend` publicado em `http://localhost:4200`;
-- `dotnet build .\MicroservicesLab.sln`: aprovado, 0 warnings, 0 errors;
-- `dotnet test .\MicroservicesLab.sln --no-build`: aprovado, 32/32 testes;
-- `go test ./...` em `PriceFeed.Service`: aprovado;
-- `go test ./...` em `Payment.Service`: aprovado;
-- smoke via Docker/Nginx: `GET http://127.0.0.1:4200/observabilidade` retornou HTTP 200;
-- health checks via proxy do front-end retornaram HTTP 200 para Order, Inventory, PriceFeed, Pricing e Audit;
-- Grafana, Prometheus e Jaeger responderam HTTP 200 nas portas publicadas;
-- `Payment.Service` permanece sem health HTTP e e exibido como nao monitorado.
-
-## FASE 29.1 - Testes automatizados Angular
-
-Status: Concluido
-
-Criado/evoluido:
-
-- configuracao de testes do front-end com Vitest e jsdom;
-- scripts `pnpm test` e `pnpm test:ci`, ambos em execucao unica/headless;
-- setup Angular de testes em `src/test-setup.ts`;
-- testes dos servicos HTTP `OrderApiService`, `InventoryApiService`, `PricingApiService`, `AuditApiService` e `LabHealthService`;
-- testes do `PriceFeedSseService` com `EventSource` falso;
-- testes comportamentais da tela de pedidos, incluindo criacao, polling, transicoes `Pending -> Paid` e `Pending -> PaymentRejected`, falhas consecutivas e destruicao durante polling;
-- testes da tela de auditoria, incluindo filtros, resultado vazio, erros e formatacao de payload JSON;
-- testes da tela de observabilidade, incluindo health checks saudavel/indisponivel/nao monitorado, atualizacao manual, polling automatico e links das ferramentas.
-
-Decisoes didaticas:
-
-- Vitest foi escolhido por ser leve, headless, compativel com TypeScript e adequado para execucao automatizada sem navegador grafico;
-- jsdom fornece o DOM necessario para testes Angular sem abrir Chrome;
-- os testes usam mocks HTTP e `EventSource` falso;
-- a suite nao depende de Docker, PostgreSQL, Kafka, Grafana, Prometheus ou Jaeger;
-- nao foram implementados testes E2E completos nesta fase.
-
-Validacao:
-
-```powershell
-cd .\src\frontend\MicroservicesLab.App
-pnpm test
-pnpm test:ci
-pnpm build
-docker compose config --quiet
-dotnet build .\MicroservicesLab.sln
-dotnet test .\MicroservicesLab.sln --no-build
-cd .\src\services\PriceFeed.Service
-go test ./...
-cd ..\Payment.Service
-go test ./...
-```
-
-Resultado da validacao:
-
-- `pnpm test`: aprovado, 22/22 testes;
-- `pnpm test:ci`: aprovado, 22/22 testes;
-- `pnpm build`: aprovado;
-- `docker compose config --quiet`: aprovado;
-- `dotnet build .\MicroservicesLab.sln`: aprovado, 0 warnings, 0 errors;
-- `dotnet test .\MicroservicesLab.sln --no-build`: aprovado, 32/32 testes;
-- `go test ./...` em `PriceFeed.Service`: aprovado;
-- `go test ./...` em `Payment.Service`: aprovado.
-
-## FASE 27 - Precos realtime (SSE)
-
-Status: Concluido
-
-Criado/evoluido:
-
-- tela funcional na rota `/precos`;
-- snapshot REST consumindo `GET /api/pricing/prices`;
-- stream realtime consumindo `GET /api/pricefeed/prices/stream`;
-- servico Angular especifico para SSE usando `EventSource`;
-- tratamento do evento SSE real `price-update`;
-- tipagem do payload real `{ symbol, price, occurredAt }`;
-- separacao visual entre REST/Kafka e SSE direto;
-- estados de conexao: conectando, conectado, reconectando, desconectado e erro;
-- destaque visual breve quando um simbolo recebe novo preco;
-- historico recente de eventos SSE recebidos;
-- encerramento da conexao SSE ao sair da tela.
-
-Decisoes didaticas:
-
-- o snapshot REST representa o estado processado pelo `Pricing.Service` apos consumo Kafka;
-- o stream SSE representa atualizacoes diretas do `PriceFeed.Service`;
-- os dois fluxos sao exibidos separadamente porque podem divergir momentaneamente;
-- nao foram implementados WebSocket, graficos complexos, API Gateway, BFF ou novos endpoints.
-
-Validacao:
-
-```powershell
-cd .\src\frontend\MicroservicesLab.App
-pnpm build
-docker compose config --quiet
-docker compose up -d --build frontend
-dotnet build .\MicroservicesLab.sln
-dotnet test .\MicroservicesLab.sln --no-build
-cd .\src\services\PriceFeed.Service
-go test ./...
-cd ..\Payment.Service
-go test ./...
-```
-
-Resultado da validacao:
-
-- build Angular local: aprovado com `pnpm build`;
-- `docker compose config --quiet`: aprovado;
-- `docker compose up -d --build frontend`: aprovado, imagem `microservices-lab-frontend:latest` reconstruida e container iniciado;
-- `dotnet build .\MicroservicesLab.sln`: aprovado, 0 warnings, 0 errors;
-- `dotnet test .\MicroservicesLab.sln --no-build`: aprovado, 27/27 testes;
-- `go test ./...` em `PriceFeed.Service`: aprovado;
-- `go test ./...` em `Payment.Service`: aprovado;
-- smoke via Docker/Nginx: `GET http://127.0.0.1:4200/pedidos` retornou HTTP 200;
-- pedido real criado via proxy do front-end: `5b6ec07b-17a9-489e-be2a-d05793153ce2`, produto `f525ba73-8eb8-4d6f-aaab-a37546146daa`, quantidade `1`, total `5500.00`;
-- polling manual confirmou transicao `Pending -> Paid`;
-- durante a primeira tentativa de smoke, o `Payment.Service` nao estava em execucao por falha anterior de conexao ao Kafka; o servico foi iniciado com `docker compose up -d payment-service` e a validacao foi repetida com sucesso.
 
 Resultado da validacao:
 
@@ -1572,3 +1351,246 @@ go test ./...
 cd ..\Payment.Service
 go test ./...
 ```
+
+Resultado da validacao:
+
+- build Angular local: aprovado com `pnpm build`;
+- `docker compose config --quiet`: aprovado;
+- `docker compose up -d --build frontend`: aprovado, imagem `microservices-lab-frontend:latest` reconstruida e container iniciado;
+- `dotnet build .\MicroservicesLab.sln`: aprovado, 0 warnings, 0 errors;
+- `dotnet test .\MicroservicesLab.sln --no-build`: aprovado, 27/27 testes;
+- `go test ./...` em `PriceFeed.Service`: aprovado;
+- `go test ./...` em `Payment.Service`: aprovado;
+- smoke via Docker/Nginx: `GET http://127.0.0.1:4200/pedidos` retornou HTTP 200;
+- pedido real criado via proxy do front-end: `5b6ec07b-17a9-489e-be2a-d05793153ce2`, produto `f525ba73-8eb8-4d6f-aaab-a37546146daa`, quantidade `1`, total `5500.00`;
+- polling manual confirmou transicao `Pending -> Paid`;
+- durante a primeira tentativa de smoke, o `Payment.Service` nao estava em execucao por falha anterior de conexao ao Kafka; o servico foi iniciado com `docker compose up -d payment-service` e a validacao foi repetida com sucesso.
+
+
+## FASE 27 - Precos realtime (SSE)
+
+Status: Concluido
+
+Criado/evoluido:
+
+- tela funcional na rota `/precos`;
+- snapshot REST consumindo `GET /api/pricing/prices`;
+- stream realtime consumindo `GET /api/pricefeed/prices/stream`;
+- servico Angular especifico para SSE usando `EventSource`;
+- tratamento do evento SSE real `price-update`;
+- tipagem do payload real `{ symbol, price, occurredAt }`;
+- separacao visual entre REST/Kafka e SSE direto;
+- estados de conexao: conectando, conectado, reconectando, desconectado e erro;
+- destaque visual breve quando um simbolo recebe novo preco;
+- historico recente de eventos SSE recebidos;
+- encerramento da conexao SSE ao sair da tela.
+
+Decisoes didaticas:
+
+- o snapshot REST representa o estado processado pelo `Pricing.Service` apos consumo Kafka;
+- o stream SSE representa atualizacoes diretas do `PriceFeed.Service`;
+- os dois fluxos sao exibidos separadamente porque podem divergir momentaneamente;
+- nao foram implementados WebSocket, graficos complexos, API Gateway, BFF ou novos endpoints.
+
+Validacao:
+
+```powershell
+cd .\src\frontend\MicroservicesLab.App
+pnpm build
+docker compose config --quiet
+docker compose up -d --build frontend
+dotnet build .\MicroservicesLab.sln
+dotnet test .\MicroservicesLab.sln --no-build
+cd .\src\services\PriceFeed.Service
+go test ./...
+cd ..\Payment.Service
+go test ./...
+```
+
+
+Resultado da validacao:
+
+- build Angular local: aprovado com `pnpm build`;
+- `docker compose config --quiet`: aprovado;
+- `docker compose up -d --build frontend`: aprovado, imagem `microservices-lab-frontend:latest` reconstruida e container iniciado;
+- `dotnet build .\MicroservicesLab.sln`: aprovado, 0 warnings, 0 errors;
+- `dotnet test .\MicroservicesLab.sln --no-build`: aprovado, 27/27 testes;
+- `go test ./...` em `PriceFeed.Service`: aprovado;
+- `go test ./...` em `Payment.Service`: aprovado;
+- smoke via Docker/Nginx: `GET http://127.0.0.1:4200/precos` retornou HTTP 200;
+- snapshot REST via `GET http://127.0.0.1:4200/api/pricing/prices` retornou 5 simbolos;
+- stream SSE via `GET http://127.0.0.1:4200/api/pricefeed/prices/stream` retornou eventos reais `price-update`;
+- em uma janela de 6 segundos, foram observados 60 eventos SSE;
+- exemplo real recebido: `{"symbol":"WEGE3","price":4030,"occurredAt":"2026-10-11T04:18:56.943107183Z"}`;
+- falhas forcadas de servicos nao foram executadas nesta validacao para evitar interromper o ambiente local; a tela mantem REST e SSE em secoes independentes e trata erro por fluxo.
+
+## FASE 28.1 - API de consulta de auditoria e interface Angular
+
+Status: Concluido
+
+Arquitetura escolhida:
+
+- a API HTTP foi hospedada no proprio `Audit.Worker`;
+- o consumidor Kafka existente continua sendo o unico consumidor de auditoria;
+- o mesmo `AuditDbContext` consulta `audit_db`;
+- nao foi criado servico separado, API Gateway ou BFF.
+
+Criado/evoluido:
+
+- endpoint `GET /audit-events` no `Audit.Worker`;
+- endpoint `GET /health` no `Audit.Worker`;
+- consulta read-only com `AsNoTracking()`;
+- ordenacao do mais recente para o mais antigo;
+- limite de resultados com maximo de 200 registros;
+- filtros opcionais por `eventType` e `messageKey`;
+- alias `orderId` aceito quando equivalente a `messageKey`;
+- proxy Docker/Nginx e proxy de desenvolvimento em `/api/audit`;
+- tela Angular funcional na rota `/auditoria`;
+- listagem de eventos persistidos;
+- detalhes do evento selecionado;
+- payload completo preservado e formatado quando JSON valido.
+
+Decisoes didaticas:
+
+- o schema do banco nao foi alterado;
+- nenhuma migration foi criada;
+- a idempotencia existente por `EventId` foi preservada;
+- contratos Kafka e regras de pedidos/pagamentos nao foram modificados;
+- nao foi implementado polling automatico, edicao, exclusao ou busca textual complexa.
+
+Validacao:
+
+```powershell
+dotnet test .\tests\Audit.Worker.Tests\Audit.Worker.Tests.csproj
+cd .\src\frontend\MicroservicesLab.App
+pnpm build
+docker compose config --quiet
+docker compose up -d --build
+dotnet build .\MicroservicesLab.sln
+dotnet test .\MicroservicesLab.sln --no-build
+cd .\src\services\PriceFeed.Service
+go test ./...
+cd ..\Payment.Service
+go test ./...
+```
+
+
+Resultado da validacao:
+
+- `dotnet test .\tests\Audit.Worker.Tests\Audit.Worker.Tests.csproj`: aprovado, 7/7 testes;
+- build Angular local: aprovado com `pnpm build`;
+- `docker compose config --quiet`: aprovado;
+- `docker compose up -d --build`: aprovado, incluindo `audit-worker` com HTTP em `http://localhost:5288`;
+- `dotnet build .\MicroservicesLab.sln`: aprovado, 0 warnings, 0 errors;
+- `dotnet test .\MicroservicesLab.sln --no-build`: aprovado, 32/32 testes;
+- `go test ./...` em `PriceFeed.Service`: aprovado;
+- `go test ./...` em `Payment.Service`: aprovado;
+- smoke via Docker/Nginx: `GET http://127.0.0.1:4200/auditoria` retornou HTTP 200;
+- `GET http://127.0.0.1:4200/api/audit/health` retornou HTTP 200;
+- pedido real criado para validacao: `88dc3e3f-a4df-4945-8b3b-851e43f0813e`;
+- pagamento confirmado com transicao `Pending -> Paid`;
+- consulta `GET /api/audit/audit-events?messageKey=88dc3e3f-a4df-4945-8b3b-851e43f0813e&limit=20` retornou 2 eventos reais: `PaymentApproved` e `OrderCreated`;
+- filtro por tipo `eventType=OrderCreated` retornou 1 evento;
+- validacao de duplicidade confirmou que nao houve `EventId` duplicado persistido para o pedido;
+- parametro invalido `limit=999` retornou HTTP 400 com mensagem `limit must be between 1 and 200.`.
+
+## FASE 28.2 - Interface de observabilidade
+
+Status: Concluido
+
+Criado/evoluido:
+
+- tela funcional na rota `/observabilidade`;
+- health checks reais para `Order.Service`, `Inventory.Service`, `Audit.Worker`, `PriceFeed.Service` e `Pricing.Service`;
+- `Payment.Service` exibido como nao monitorado, porque nao expoe endpoint HTTP de health nesta fase;
+- atualizacao manual da saude dos servicos;
+- polling simples a cada 15 segundos, encerrado ao sair da tela;
+- links para Grafana, Prometheus e Jaeger usando as portas publicadas no host;
+- visao estatica dos fluxos de pedidos, precos e observabilidade;
+- reutilizacao da configuracao central de endpoints do Angular.
+
+Decisoes didaticas:
+
+- nenhum endpoint de health novo foi criado;
+- a tela diferencia servico indisponivel de servico sem monitoramento HTTP;
+- Grafana, Prometheus e Jaeger continuam sendo as ferramentas de observabilidade;
+- a visao arquitetural e informativa e nao representa telemetria em tempo real.
+
+Validacao:
+
+```powershell
+cd .\src\frontend\MicroservicesLab.App
+pnpm build
+docker compose config --quiet
+docker compose up -d --build frontend
+dotnet build .\MicroservicesLab.sln
+dotnet test .\MicroservicesLab.sln --no-build
+cd .\src\services\PriceFeed.Service
+go test ./...
+cd ..\Payment.Service
+go test ./...
+```
+
+Resultado da validacao:
+
+- build Angular local: aprovado com `pnpm build`;
+- `docker compose config --quiet`: aprovado;
+- `docker compose up -d --build frontend`: aprovado, com `frontend` publicado em `http://localhost:4200`;
+- `dotnet build .\MicroservicesLab.sln`: aprovado, 0 warnings, 0 errors;
+- `dotnet test .\MicroservicesLab.sln --no-build`: aprovado, 32/32 testes;
+- `go test ./...` em `PriceFeed.Service`: aprovado;
+- `go test ./...` em `Payment.Service`: aprovado;
+- smoke via Docker/Nginx: `GET http://127.0.0.1:4200/observabilidade` retornou HTTP 200;
+- health checks via proxy do front-end retornaram HTTP 200 para Order, Inventory, PriceFeed, Pricing e Audit;
+- Grafana, Prometheus e Jaeger responderam HTTP 200 nas portas publicadas;
+- `Payment.Service` permanece sem health HTTP e e exibido como nao monitorado.
+
+## FASE 29.1 - Testes automatizados Angular
+
+Status: Concluido
+
+Criado/evoluido:
+
+- configuracao de testes do front-end com Vitest e jsdom;
+- scripts `pnpm test` e `pnpm test:ci`, ambos em execucao unica/headless;
+- setup Angular de testes em `src/test-setup.ts`;
+- testes dos servicos HTTP `OrderApiService`, `InventoryApiService`, `PricingApiService`, `AuditApiService` e `LabHealthService`;
+- testes do `PriceFeedSseService` com `EventSource` falso;
+- testes comportamentais da tela de pedidos, incluindo criacao, polling, transicoes `Pending -> Paid` e `Pending -> PaymentRejected`, falhas consecutivas e destruicao durante polling;
+- testes da tela de auditoria, incluindo filtros, resultado vazio, erros e formatacao de payload JSON;
+- testes da tela de observabilidade, incluindo health checks saudavel/indisponivel/nao monitorado, atualizacao manual, polling automatico e links das ferramentas.
+
+Decisoes didaticas:
+
+- Vitest foi escolhido por ser leve, headless, compativel com TypeScript e adequado para execucao automatizada sem navegador grafico;
+- jsdom fornece o DOM necessario para testes Angular sem abrir Chrome;
+- os testes usam mocks HTTP e `EventSource` falso;
+- a suite nao depende de Docker, PostgreSQL, Kafka, Grafana, Prometheus ou Jaeger;
+- nao foram implementados testes E2E completos nesta fase.
+
+Validacao:
+
+```powershell
+cd .\src\frontend\MicroservicesLab.App
+pnpm test
+pnpm test:ci
+pnpm build
+docker compose config --quiet
+dotnet build .\MicroservicesLab.sln
+dotnet test .\MicroservicesLab.sln --no-build
+cd .\src\services\PriceFeed.Service
+go test ./...
+cd ..\Payment.Service
+go test ./...
+```
+
+Resultado da validacao:
+
+- `pnpm test`: aprovado, 22/22 testes;
+- `pnpm test:ci`: aprovado, 22/22 testes;
+- `pnpm build`: aprovado;
+- `docker compose config --quiet`: aprovado;
+- `dotnet build .\MicroservicesLab.sln`: aprovado, 0 warnings, 0 errors;
+- `dotnet test .\MicroservicesLab.sln --no-build`: aprovado, 32/32 testes;
+- `go test ./...` em `PriceFeed.Service`: aprovado;
+- `go test ./...` em `Payment.Service`: aprovado.

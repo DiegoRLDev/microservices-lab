@@ -54,6 +54,7 @@ services:
       - /bin/sh
       - -c
       - |
+        set -e
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic order-created --partitions 3 --replication-factor 1
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic payment-approved --partitions 3 --replication-factor 1
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic payment-rejected --partitions 3 --replication-factor 1
@@ -217,6 +218,8 @@ services:
         condition: service_started
       pricing-service:
         condition: service_healthy
+      audit-worker:
+        condition: service_started
 
   audit-worker:
     build:
