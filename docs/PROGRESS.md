@@ -52,10 +52,29 @@ O laboratorio esta organizado em duas partes:
 | 27 | Precos realtime (SSE) | Concluido |
 | 28 | Auditoria e observabilidade | Concluido |
 | 29.1 | Testes automatizados Angular | Concluido |
-| 29.2 | Testes integrados e cenarios de falha | Pendente |
+| 29.2 | Testes integrados e cenarios de falha | Concluido |
 | 29.3 | Revisao tecnica e documentacao | Pendente |
 | 30 | Responsividade e ajustes visuais Angular | Pendente |
 | 31 | Consistencia entre pedidos e estoque | Pendente |
+
+## FASE 29.2 - Testes integrados e cenarios de falha
+
+Status: Concluido (20/10/2026).
+
+- Criado `scripts/Test-Integration.ps1`: endpoints reais via Nginx, IDs unicos, timeouts, falhas sequenciais opcionais e restauracao em finally.
+- Criado [relatorio de integracao](INTEGRATION_TESTS.md), com matriz e procedimentos de retomada.
+- Branch confirmada: `feature/part-3`; working tree inicialmente limpa.
+- Regressao: Angular 22/22, build frontend aprovado, .NET build sem warnings/erros e testes 32/32, testes dos dois servicos Go aprovados, Compose config aprovado.
+- Primeira tentativa: bloqueada pelo engine Docker; apos reinicializacao pelo usuario, os testes puderam ser executados.
+- Corrigidos dois erros do script: arrays REST aninhados no PowerShell 5.1 e expectativa de resposta HTTP imediata durante parada do upstream Nginx.
+- Criado `scripts/Test-Integration.Helpers.ps1`; verificacoes independentes passaram em Windows PowerShell 5.1 e PowerShell 7.
+- Rodada final `phase29-2-cd80e69c5a5f444d8e5ab18b0c7a6963`: 8 cenarios PASSOU, codigo 0; pedidos/auditoria, validacao de entrada, SSE/Kafka e recuperacao de Payment, Inventory, Pricing, PriceFeed e Audit.
+- PostgreSQL e Kafka conferidos para os IDs atuais; 13 servicos persistentes running ao final, kafka-init Exited (0).
+- Relatorio detalhado e JSONs registram evidencias; os resultados originais do usuario foram preservados.
+- Telas Angular verificadas com pedido atual, filtro de auditoria e payload real. Reconexao SSE comprovada na mesma sessao: Conectado -> Reconectando -> Conectado, com novos eventos e sem reload.
+- Corrigido bug do cliente SSE: EventSource CLOSED apos handshake 502 agora permite nova tentativa apos 3s; unsubscribe cancela a tentativa pendente. Suite Angular passou com 24/24; builds local/Docker aprovados.
+- Kafka nao sera interrompido por risco conhecido de SaveChanges antes de publicacao. Consistencia segue pendente da Fase 31.
+- Nenhum commit, staging, push, migration, contrato ou regra de negocio alterado. Fase 29.3 nao iniciada.
 
 ## Regra de execucao
 

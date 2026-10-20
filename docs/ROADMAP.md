@@ -54,7 +54,7 @@ A Parte III adiciona uma aplicacao Angular para interagir com o laboratorio. A i
 | 27 | Precos realtime (SSE) | Concluido |
 | 28 | Auditoria e observabilidade | Concluido |
 | 29.1 | Testes automatizados Angular | Concluido |
-| 29.2 | Testes integrados e cenarios de falha | Pendente |
+| 29.2 | Testes integrados e cenarios de falha | Concluido |
 | 29.3 | Revisao tecnica e documentacao | Pendente |
 | 30 | Responsividade e ajustes visuais Angular | Pendente |
 | 31 | Consistencia entre pedidos e estoque | Pendente |
@@ -82,7 +82,7 @@ O front-end deve consumir as APIs existentes sem introduzir API Gateway, BFF, au
 | 27 | Precos realtime (SSE) | Consumir o stream SSE do `PriceFeed.Service` e o estado atual do `Pricing.Service`. | Concluido |
 | 28 | Auditoria e observabilidade | Expor auditoria e links/leituras operacionais sem substituir Jaeger, Prometheus ou Grafana. | Concluido |
 | 29.1 | Testes automatizados Angular | Configurar testes unitarios/comportamentais do front-end sem depender de servicos externos. | Concluido |
-| 29.2 | Testes integrados e cenarios de falha | Validar fluxos integrados e falhas controladas do laboratorio. | Pendente |
+| 29.2 | Testes integrados e cenarios de falha | Validar fluxos integrados e falhas controladas do laboratorio. | Concluido |
 | 29.3 | Revisao tecnica e documentacao | Revisar a Parte III e consolidar documentacao tecnica. | Pendente |
 | 30 | Responsividade e ajustes visuais Angular | Ajustar a experiencia visual e responsiva da aplicacao. | Pendente |
 | 31 | Consistencia entre pedidos e estoque | Avaliar reserva, idempotencia e compensacao de estoque. | Pendente |
@@ -122,6 +122,12 @@ Escopo:
 - testes de servicos HTTP com mocks;
 - testes do servico SSE com `EventSource` falso;
 - testes de pedidos, auditoria e observabilidade sem depender de Docker ou APIs reais.
+
+### Fase 29.2 - Testes integrados e cenarios de falha
+
+A Fase 29.2 possui script e relatorio em [INTEGRATION_TESTS.md](INTEGRATION_TESTS.md).
+As regressoes e 8 cenarios automatizados integrados passaram. O bloqueio inicial do Docker foi resolvido; telas Angular e reconexao EventSource foram verificadas no navegador apos correcao da recuperacao SSE. A interrupcao do Kafka foi omitida pelo risco conhecido de consistencia.
+Fase 29.2 concluida. Fases 29.3, 30 e 31 permanecem pendentes.
 
 ### Pendencia futura da Fase 31
 

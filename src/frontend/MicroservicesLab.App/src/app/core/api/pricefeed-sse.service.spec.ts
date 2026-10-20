@@ -47,6 +47,7 @@ class MockEventSource {
 
 describe('PriceFeedSseService', () => {
   beforeEach(() => {
+    vi.useFakeTimers();
     MockEventSource.instances.length = 0;
     vi.stubGlobal('EventSource', MockEventSource);
 
@@ -56,6 +57,7 @@ describe('PriceFeedSseService', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
@@ -109,6 +111,36 @@ describe('PriceFeedSseService', () => {
     expect(events.at(-1)).toMatchObject({ type: 'status', status: 'error' });
 
     events.unsubscribe();
+    expect(source.closed).toBe(true);
+  });
+
+  it('opens a new EventSource after a closed handshake and resumes delivery', () => {
+    const events = subscribeToService();
+    const first = MockEventSource.instances[0];
+    first.readyState = MockEventSource.CLOSED;
+    first.onerror?.();
+    expect(first.closed).toBe(true);
+    expect(MockEventSource.instances).toHaveLength(1);
+
+    vi.advanceTimersByTime(3000);
+    expect(MockEventSource.instances).toHaveLength(2);
+    const recovered = MockEventSource.instances[1];
+    recovered.onopen?.();
+    recovered.emit('price-update', JSON.stringify({ symbol: 'PETR4', price: 3810, occurredAt: '2026-10-20T13:00:00Z' }));
+    expect(events.at(-1)).toMatchObject({ type: 'price-update', update: { symbol: 'PETR4', price: 3810 } });
+    events.unsubscribe();
+    expect(recovered.closed).toBe(true);
+  });
+
+  it('cancels a scheduled reconnection when unsubscribed', () => {
+    const events = subscribeToService();
+    const source = MockEventSource.instances[0];
+    source.readyState = MockEventSource.CLOSED;
+    source.onerror?.();
+    events.unsubscribe();
+
+    vi.advanceTimersByTime(6000);
+    expect(MockEventSource.instances).toHaveLength(1);
     expect(source.closed).toBe(true);
   });
 });

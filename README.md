@@ -231,7 +231,7 @@ Na FASE 16, `Pricing.Service` consome `price-updated` com o consumer group `pric
 | 27 | Precos realtime (SSE) | Concluido |
 | 28 | Auditoria e observabilidade | Concluido |
 | 29.1 | Testes automatizados Angular | Concluido |
-| 29.2 | Testes integrados e cenarios de falha | Pendente |
+| 29.2 | Testes integrados e cenarios de falha | Concluido |
 | 29.3 | Revisao tecnica e documentacao | Pendente |
 | 30 | Responsividade e ajustes visuais Angular | Pendente |
 | 31 | Consistencia entre pedidos e estoque | Pendente |
@@ -483,6 +483,10 @@ Lab: [LAB 16 - Pricing.Service Kafka](docs/labs/LAB-16-pricing-service-kafka.md)
 Na FASE 15, `symbol` e a Kafka message key para estudar ordenacao por ativo dentro de partitions. Nas Fases 18 e 19, Kubernetes podera ser usado para subir replicas, mas o conceito principal sera a relacao entre consumer groups, partitions, ownership, rebalance e ordering.
 
 ## Comandos
+
+Testes integrados da Fase 29.2: [procedimentos e matriz de resultados](docs/INTEGRATION_TESTS.md).
+O script `scripts/Test-Integration.ps1` consulta o ambiente real e oferece falhas controladas com `-IncludeFailures`.
+A validacao automatizada passou em 8 cenarios apos corrigir a enumeracao de listas no PowerShell 5.1 e as sondas de indisponibilidade. Pedidos, auditoria e reconexao SSE foram verificados no navegador. A recuperacao do cliente SSE apos handshake 502 foi corrigida e possui testes; detalhes no relatorio.
 
 Validar a solucao:
 

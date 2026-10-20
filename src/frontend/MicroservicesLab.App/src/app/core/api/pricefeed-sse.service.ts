@@ -1,5 +1,5 @@
 import { Injectable, NgZone, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, retry } from 'rxjs';
 import { API_ENDPOINTS } from './api-endpoints';
 
 export type PriceFeedConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'error';
@@ -76,12 +76,17 @@ export class PriceFeedSseService {
             ? 'Conexao SSE interrompida. O navegador tentara reconectar.'
             : 'Conexao SSE indisponivel.'
         });
+
+        // A non-200 handshake can close EventSource permanently, unlike a transient disconnect.
+        if (!reconnecting) {
+          subscriber.error(new Error('SSE connection closed.'));
+        }
       };
 
       return () => {
         eventSource.close();
       };
-    });
+    }).pipe(retry({ delay: 3000 }));
   }
 
   private parseUpdate(payload: string): PriceFeedUpdate | null {
