@@ -104,6 +104,14 @@ pnpm start
 
 O `pnpm start` usa `proxy.conf.json` para encaminhar `/api/order`, `/api/inventory`, `/api/pricefeed`, `/api/pricing` e `/api/audit` para as portas locais dos servicos, evitando CORS durante o desenvolvimento.
 
+Testes automatizados do front-end:
+
+```powershell
+cd .\src\frontend\MicroservicesLab.App
+pnpm test
+pnpm test:ci
+```
+
 Kubernetes local:
 
 ```powershell
@@ -222,7 +230,11 @@ Na FASE 16, `Pricing.Service` consome `price-updated` com o consumer group `pric
 | 26 | Pedidos e pagamentos | Concluido |
 | 27 | Precos realtime (SSE) | Concluido |
 | 28 | Auditoria e observabilidade | Concluido |
-| 29 | Integracao e validacao final | Pendente |
+| 29.1 | Testes automatizados Angular | Concluido |
+| 29.2 | Testes integrados e cenarios de falha | Pendente |
+| 29.3 | Revisao tecnica e documentacao | Pendente |
+| 30 | Responsividade e ajustes visuais Angular | Pendente |
+| 31 | Consistencia entre pedidos e estoque | Pendente |
 
 ## Parte III: Aplicacao Front-end
 
@@ -251,7 +263,7 @@ Na FASE 26.2, a rota `/pedidos` passa a consumir o `Order.Service` por meio do p
 - consulta de detalhes via `GET /api/order/orders/{id}`;
 - acompanhamento de pagamento por polling enquanto o status estiver `Pending`.
 
-A criacao de pedidos usa o comportamento atual do backend: o `Order.Service` consulta disponibilidade no `Inventory.Service`, mas nao reserva estoque automaticamente. A consistencia entre pedidos e estoque fica registrada como pendencia futura da FASE 29.1.
+A criacao de pedidos usa o comportamento atual do backend: o `Order.Service` consulta disponibilidade no `Inventory.Service`, mas nao reserva estoque automaticamente. A consistencia entre pedidos e estoque fica registrada como pendencia futura da FASE 31.
 
 Na FASE 27, a rota `/precos` demonstra dois caminhos de dados em paralelo:
 
@@ -277,6 +289,13 @@ Na FASE 28.2, a rota `/observabilidade` centraliza a visao operacional do labora
 - visao estatica dos fluxos de pedidos, precos e observabilidade.
 
 A tela possui atualizacao manual e polling simples a cada 15 segundos. Ela nao cria novos endpoints, nao consulta APIs internas de Grafana/Prometheus/Jaeger e nao substitui as ferramentas de observabilidade.
+
+Na FASE 29.1, o front-end passou a ter testes automatizados com Vitest e jsdom:
+
+- `pnpm test` executa a suite Vitest;
+- `pnpm test:ci` executa uma unica rodada para CI;
+- os testes cobrem servicos HTTP, SSE, criacao/polling de pedidos, auditoria e observabilidade;
+- a suite usa mocks de HTTP/EventSource e nao depende de Docker, PostgreSQL, Kafka, Grafana, Prometheus ou Jaeger.
 
 Portas usadas pelo front-end:
 

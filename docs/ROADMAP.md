@@ -53,7 +53,11 @@ A Parte III adiciona uma aplicacao Angular para interagir com o laboratorio. A i
 | 26 | Pedidos e pagamentos | Concluido |
 | 27 | Precos realtime (SSE) | Concluido |
 | 28 | Auditoria e observabilidade | Concluido |
-| 29 | Integracao e validacao final | Pendente |
+| 29.1 | Testes automatizados Angular | Concluido |
+| 29.2 | Testes integrados e cenarios de falha | Pendente |
+| 29.3 | Revisao tecnica e documentacao | Pendente |
+| 30 | Responsividade e ajustes visuais Angular | Pendente |
+| 31 | Consistencia entre pedidos e estoque | Pendente |
 
 ## Objetivo da Parte III
 
@@ -77,7 +81,11 @@ O front-end deve consumir as APIs existentes sem introduzir API Gateway, BFF, au
 | 26 | Pedidos e pagamentos | Criar pedidos e acompanhar a evolucao assincrona do status. | Concluido |
 | 27 | Precos realtime (SSE) | Consumir o stream SSE do `PriceFeed.Service` e o estado atual do `Pricing.Service`. | Concluido |
 | 28 | Auditoria e observabilidade | Expor auditoria e links/leituras operacionais sem substituir Jaeger, Prometheus ou Grafana. | Concluido |
-| 29 | Integracao e validacao final | Validar o fluxo completo da aplicacao com os microsservicos. | Pendente |
+| 29.1 | Testes automatizados Angular | Configurar testes unitarios/comportamentais do front-end sem depender de servicos externos. | Concluido |
+| 29.2 | Testes integrados e cenarios de falha | Validar fluxos integrados e falhas controladas do laboratorio. | Pendente |
+| 29.3 | Revisao tecnica e documentacao | Revisar a Parte III e consolidar documentacao tecnica. | Pendente |
+| 30 | Responsividade e ajustes visuais Angular | Ajustar a experiencia visual e responsiva da aplicacao. | Pendente |
+| 31 | Consistencia entre pedidos e estoque | Avaliar reserva, idempotencia e compensacao de estoque. | Pendente |
 
 ### Fase 28.1 - Auditoria
 
@@ -103,7 +111,19 @@ Escopo:
 - atalhos para Grafana, Prometheus e Jaeger usando portas publicadas no host;
 - visao estatica dos fluxos de pedidos, precos e observabilidade.
 
-### Pendencia futura da Fase 29.1
+### Fase 29.1 - Testes automatizados Angular
+
+Status: Concluido
+
+Escopo:
+
+- configuracao de Vitest com jsdom para execucao headless;
+- scripts `pnpm test` e `pnpm test:ci`;
+- testes de servicos HTTP com mocks;
+- testes do servico SSE com `EventSource` falso;
+- testes de pedidos, auditoria e observabilidade sem depender de Docker ou APIs reais.
+
+### Pendencia futura da Fase 31
 
 Avaliar e implementar a consistencia entre pedidos e estoque sem alterar o comportamento atual da FASE 26:
 

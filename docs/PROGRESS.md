@@ -51,7 +51,11 @@ O laboratorio esta organizado em duas partes:
 | 26 | Pedidos e pagamentos | Concluido |
 | 27 | Precos realtime (SSE) | Concluido |
 | 28 | Auditoria e observabilidade | Concluido |
-| 29 | Integracao e validacao final | Pendente |
+| 29.1 | Testes automatizados Angular | Concluido |
+| 29.2 | Testes integrados e cenarios de falha | Pendente |
+| 29.3 | Revisao tecnica e documentacao | Pendente |
+| 30 | Responsividade e ajustes visuais Angular | Pendente |
+| 31 | Consistencia entre pedidos e estoque | Pendente |
 
 ## Regra de execucao
 
@@ -1278,6 +1282,56 @@ Resultado da validacao:
 - Grafana, Prometheus e Jaeger responderam HTTP 200 nas portas publicadas;
 - `Payment.Service` permanece sem health HTTP e e exibido como nao monitorado.
 
+## FASE 29.1 - Testes automatizados Angular
+
+Status: Concluido
+
+Criado/evoluido:
+
+- configuracao de testes do front-end com Vitest e jsdom;
+- scripts `pnpm test` e `pnpm test:ci`, ambos em execucao unica/headless;
+- setup Angular de testes em `src/test-setup.ts`;
+- testes dos servicos HTTP `OrderApiService`, `InventoryApiService`, `PricingApiService`, `AuditApiService` e `LabHealthService`;
+- testes do `PriceFeedSseService` com `EventSource` falso;
+- testes comportamentais da tela de pedidos, incluindo criacao, polling, transicoes `Pending -> Paid` e `Pending -> PaymentRejected`, falhas consecutivas e destruicao durante polling;
+- testes da tela de auditoria, incluindo filtros, resultado vazio, erros e formatacao de payload JSON;
+- testes da tela de observabilidade, incluindo health checks saudavel/indisponivel/nao monitorado, atualizacao manual, polling automatico e links das ferramentas.
+
+Decisoes didaticas:
+
+- Vitest foi escolhido por ser leve, headless, compativel com TypeScript e adequado para execucao automatizada sem navegador grafico;
+- jsdom fornece o DOM necessario para testes Angular sem abrir Chrome;
+- os testes usam mocks HTTP e `EventSource` falso;
+- a suite nao depende de Docker, PostgreSQL, Kafka, Grafana, Prometheus ou Jaeger;
+- nao foram implementados testes E2E completos nesta fase.
+
+Validacao:
+
+```powershell
+cd .\src\frontend\MicroservicesLab.App
+pnpm test
+pnpm test:ci
+pnpm build
+docker compose config --quiet
+dotnet build .\MicroservicesLab.sln
+dotnet test .\MicroservicesLab.sln --no-build
+cd .\src\services\PriceFeed.Service
+go test ./...
+cd ..\Payment.Service
+go test ./...
+```
+
+Resultado da validacao:
+
+- `pnpm test`: aprovado, 22/22 testes;
+- `pnpm test:ci`: aprovado, 22/22 testes;
+- `pnpm build`: aprovado;
+- `docker compose config --quiet`: aprovado;
+- `dotnet build .\MicroservicesLab.sln`: aprovado, 0 warnings, 0 errors;
+- `dotnet test .\MicroservicesLab.sln --no-build`: aprovado, 32/32 testes;
+- `go test ./...` em `PriceFeed.Service`: aprovado;
+- `go test ./...` em `Payment.Service`: aprovado.
+
 ## FASE 27 - Precos realtime (SSE)
 
 Status: Concluido
@@ -1450,9 +1504,9 @@ Conclusao:
 - o `Inventory.Service` ja implementa reserva via HTTP e gRPC;
 - o `Order.Service` atualmente usa somente `CheckAvailability`;
 - a reserva atual nao possui idempotencia nem protecao explicita contra concorrencia;
-- a integracao segura da reserva foi adiada para a FASE 29.1.
+- a integracao segura da reserva foi adiada para a FASE 31.
 
-Pendencia futura da FASE 29.1:
+Pendencia futura da FASE 31:
 
 - reserva atomica;
 - idempotencia;
