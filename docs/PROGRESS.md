@@ -54,8 +54,66 @@ O laboratorio esta organizado em tres partes:
 | 29.1 | Testes automatizados Angular | Concluido |
 | 29.2 | Testes integrados e cenarios de falha | Concluido |
 | 29.3 | Revisao tecnica e documentacao | Concluido |
-| 30 | Responsividade e ajustes visuais Angular | Pendente |
+| 30 | Responsividade e ajustes visuais Angular | Em execucao |
 | 31 | Consistencia entre pedidos e estoque | Pendente |
+
+## FASE 30 - Responsividade Angular
+
+Status: Em execucao (20/10/2026), conforme o status pedido; implementacao e validacoes desta entrega realizadas. Fase 31 pendente.
+
+Diagnostico inicial:
+
+- Breakpoints de viewport nao consideravam a largura ocupada pela sidebar, deixando grids estreitos ou maiores que o conteudo disponivel.
+- Minimos intrinsecos de grid/flex permitiam que tabelas, textos e JSON ampliassem seus pais.
+- Navegacao mobile sempre expandida, sem controle de abertura/fechamento.
+- Campos, botoes, foco e regioes de scroll precisavam de tratamento compartilhado; botao Detalhes podia quebrar no meio da palavra.
+
+Implementado:
+
+- Grids auto-fit/minmax(min(100%, ...), 1fr), com largura minima zero nos filhos que precisam encolher. Padding adaptativo com clamp e variaveis CSS para titulos/paineis em telas pequenas.
+- Sidebar desktop preservada. Ate 820px, menu recolhivel em fluxo normal, sem overlay, com botao de 44px, aria-expanded/controls, rota atual acessivel, Escape e retorno de foco. Ao navegar, fecha e foca o conteudo principal; link de salto por teclado.
+- Formularios e grupos adaptativos; identificadores/textos longos quebram onde apropriado. Indicadores continuam usando texto alem de cor.
+- Tabelas preservadas, sem duplicar dados em cards: scroll somente no container, regiao nomeada/focavel e botoes Detalhes com largura minima e texto inteiro.
+- Payload JSON em pre com formatacao preservada, largura contida e scroll proprio acessivel por teclado.
+- Precos com valores tabulares e sem deslocamento vertical no highlight; reducao de movimento respeitada. EventSource/retry, polling de pedidos/health e HTTP permaneceram intactos.
+- Quatro testes novos usam o template real: abrir/fechar, Escape/foco, fechamento/foco apos navegacao e salto ao conteudo sem mudar de rota por causa do base href.
+
+Validacao no navegador:
+
+| Paginas | Larguras de viewport verificadas | Resultado |
+| --- | --- | --- |
+| Dashboard, Produtos, Pedidos, Precos, Auditoria, Observabilidade | 360, 390, 430, 768, 1024, 1280, 1920px | Medicoes de DOM sem overflow horizontal global; formularios/listas com APIs reais |
+
+- Validacao inicial via servidor Angular em localhost:4201 e verificacao posterior via Docker/Nginx em localhost:4200. Nao foi instalado Playwright/Cypress nem adicionada biblioteca CSS.
+- Screenshots de estados representativos em mobile/tablet/desktop; as medidas nas 42 combinacoes nao equivalem a auditoria visual completa de todos os estados possiveis.
+- Na rodada Docker, o bundle novo foi conferido e a pagina recarregada para evitar index.html antigo em cache. Se a interface antiga persistir apos rebuild, use Ctrl+F5. As 42 combinacoes passaram sem overflow global e com controles visiveis de pelo menos 44px.
+- Menu testado no navegador com mouse/Enter, Escape, fechamento apos escolher Produtos e foco no main. A navegacao permite as seis rotas sem scroll horizontal.
+- Detalhes reais de produto/pedido, validacao de formularios vazios e consulta de disponibilidade observados em mobile. Nenhum produto/pedido novo foi criado para esta fase; disponibilidade nao reserva estoque.
+- Auditoria: payload real de 477 caracteres preservado, com scroll interno (452px de conteudo em 307px disponiveis no teste mobile) e documento sem overflow. Filtro longo e sem resultados e limite invalido exibiram estados legiveis.
+- SSE com cinco simbolos reais e historico recebendo eventos; snapshot REST, auditoria e healths continuaram funcionando. Nao foram provocadas falhas de servicos para testar esta fase.
+
+Regressao:
+
+- pnpm test:ci: 30/30 aprovados (26 anteriores + 4 de navegacao/acessibilidade).
+- pnpm build: aprovado.
+- dotnet build MicroservicesLab.sln: aprovado, 0 warnings/erros; dotnet test --no-build: 32/32.
+- go test ./... em Payment.Service e PriceFeed.Service: aprovados.
+- docker compose config --quiet: aprovado. Frontend reconstruido e atualizado isoladamente com docker compose up -d --no-deps --build frontend; backends e volumes preservados.
+
+Arquivos principais:
+
+- src/styles.css; app.component.ts/html/css; novo app.component.spec.ts.
+- CSS das seis paginas; templates Produtos, Pedidos, Precos e Auditoria para regioes de scroll acessiveis.
+- README, ROADMAP e este PROGRESS. Nenhum cliente API, servico backend, manifesto Kubernetes ou arquivo de dependencias alterado.
+
+Checklist manual para complementar:
+
+1. Abrir localhost:4200 em celular/tablet real; abrir menu, percorrer seis rotas, testar Escape com teclado e observar foco.
+2. Preencher formularios com teclado virtual, mensagens de validacao e nomes extensos; conferir zoom e orientacao retrato/paisagem.
+3. Rolar tabelas horizontalmente e abrir detalhes; na auditoria, percorrer JSON longo sem mover horizontalmente a pagina.
+4. Manter Precos aberto para observar novos eventos e ler status de conexao; conferir healths, ferramentas e fluxos em Observabilidade.
+
+Limites: sem dispositivo fisico/Safari/iOS/Android, teclado virtual ou auditoria WCAG completa. Sem repetir cenarios invasivos de recuperacao. Dados atuais nao cobrem todos os tamanhos e estados; complementar com o checklist. Nao houve staging, commit ou push; branch feature/part-3 preservada.
 
 ## FASE 29.3 - Revisao tecnica e consolidacao da documentacao
 

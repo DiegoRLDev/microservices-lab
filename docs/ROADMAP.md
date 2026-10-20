@@ -56,7 +56,7 @@ A Parte III adiciona uma aplicacao Angular para interagir com o laboratorio. A i
 | 29.1 | Testes automatizados Angular | Concluido |
 | 29.2 | Testes integrados e cenarios de falha | Concluido |
 | 29.3 | Revisao tecnica e documentacao | Concluido |
-| 30 | Responsividade e ajustes visuais Angular | Pendente |
+| 30 | Responsividade e ajustes visuais Angular | Em execucao |
 | 31 | Consistencia entre pedidos e estoque | Pendente |
 
 ## Objetivo da Parte III
@@ -84,7 +84,7 @@ O front-end deve consumir as APIs existentes sem introduzir API Gateway, BFF, au
 | 29.1 | Testes automatizados Angular | Configurar testes unitarios/comportamentais do front-end sem depender de servicos externos. | Concluido |
 | 29.2 | Testes integrados e cenarios de falha | Validar fluxos integrados e falhas controladas do laboratorio. | Concluido |
 | 29.3 | Revisao tecnica e documentacao | Revisar a Parte III e consolidar documentacao tecnica. | Concluido |
-| 30 | Responsividade e ajustes visuais Angular | Ajustar a experiencia visual e responsiva da aplicacao. | Pendente |
+| 30 | Responsividade e ajustes visuais Angular | Ajustar a experiencia visual e responsiva da aplicacao. | Em execucao |
 | 31 | Consistencia entre pedidos e estoque | Avaliar reserva, idempotencia e compensacao de estoque. | Pendente |
 
 ### Fase 28.1 - Auditoria
@@ -127,7 +127,7 @@ Escopo:
 
 A Fase 29.2 possui script e relatorio em [INTEGRATION_TESTS.md](INTEGRATION_TESTS.md).
 As regressoes e 8 cenarios automatizados integrados passaram. O bloqueio inicial do Docker foi resolvido; telas Angular e reconexao EventSource foram verificadas no navegador apos correcao da recuperacao SSE. A interrupcao do Kafka foi omitida pelo risco conhecido de consistencia.
-Fase 29.2 concluida. A revisao posterior esta registrada abaixo; Fases 30 e 31 permanecem pendentes.
+Fase 29.2 concluida. A revisao posterior esta registrada abaixo; Fase 30 em execucao e Fase 31 pendente.
 
 ### Fase 29.3 - Revisao tecnica e documentacao
 
@@ -139,11 +139,14 @@ README consolidado; guias e diagramas atualizados; evidencias historicas preserv
 
 ### Fase 30 - Responsividade Angular
 
-Status: Pendente.
+Status: Em execucao, conforme solicitado para esta entrega.
 
-- Layout responsivo e navegacao mobile.
-- Tabelas/grids, formularios e ajustes visuais.
-- Verificacao em desktop, tablet e celular.
+- Implementados grids adaptativos, formularios e textos sem overflow global nas seis telas.
+- Menu mobile recolhivel ate 820px, com aria-expanded, foco, Escape e fechamento ao navegar; sidebar desktop preservada.
+- Tabelas com scroll localizado acessivel por teclado; payload JSON preserva formatacao e scroll proprio.
+- Navegador verificado em 360, 390, 430, 768, 1024, 1280 e 1920px, sem instalar ferramentas E2E.
+- Evidencias, limitacoes e checklist manual: [PROGRESS](PROGRESS.md#fase-30---responsividade-angular). Dispositivos fisicos/teclados virtuais nao validados.
+- Sem alteracoes de backend, contratos, polling, SSE ou regras de negocio. Fase 31 nao iniciada.
 
 ### Pendencias tecnicas preservadas
 

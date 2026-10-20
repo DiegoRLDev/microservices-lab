@@ -2,7 +2,7 @@
 
 Laboratorio funcional de microsservicos com .NET 9, Go, PostgreSQL, Kafka, gRPC e Angular. A interface e um painel de estudo, nao um ERP ou sistema de producao.
 
-Na branch `feature/part-3`, a Parte I (0-12), a Parte II ate a Fase 16 e a Parte III ate 29.3 estao concluidas. Fases 17-22, 30 (responsividade) e 31 (consistencia pedidos/estoque) permanecem pendentes. Veja o [roadmap oficial](docs/ROADMAP.md) e o [historico de progresso](docs/PROGRESS.md).
+Na branch `feature/part-3`, a Parte I (0-12), a Parte II ate a Fase 16 e a Parte III ate 29.3 estao concluidas. A Fase 30 (responsividade Angular) esta em execucao, com a implementacao e validacoes desta entrega registradas no [progresso](docs/PROGRESS.md#fase-30---responsividade-angular). Fases 17-22 e 31 (consistencia pedidos/estoque) permanecem pendentes. Veja o [roadmap oficial](docs/ROADMAP.md).
 
 ## Arquitetura resumida
 
@@ -123,7 +123,7 @@ Procedimentos e evidencias E2E: [testes integrados](docs/INTEGRATION_TESTS.md). 
 - SSE nao tem replay; os caminhos REST/Kafka e SSE podem divergir momentaneamente.
 - Observabilidade instrumenta Order, Inventory, Payment e Audit. PriceFeed/Pricing nao possuem a instrumentacao OTLP dessa Parte I.
 - Credenciais e portas sao para laboratorio local. Sem autenticacao/TLS; nao expor o Compose diretamente na internet.
-- Responsividade completa fica na Fase 30. A interrupcao Kafka foi omitida nos testes da Fase 29.2 por risco de inconsistencia.
+- A Fase 30 adapta as seis telas de 360px a 1920px, com menu recolhivel ate 820px e scroll localizado nas tabelas/payload. Validacao em dispositivos fisicos permanece manual. A interrupcao Kafka foi omitida na Fase 29.2 por risco de inconsistencia.
 
 Diagnosticos, severidades e pendencias: [revisao tecnica 29.3](docs/TECHNICAL_REVIEW.md).
 

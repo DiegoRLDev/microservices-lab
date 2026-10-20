@@ -30,7 +30,7 @@
 
 .page-header h1 {
   margin-top: 8px;
-  font-size: 2rem;
+  font-size: var(--page-title-size, 2rem);
   line-height: 1.15;
 }
 
@@ -77,16 +77,16 @@ button:disabled {
 }
 
 .summary-grid {
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13.75rem), 1fr));
 }
 
 .service-grid {
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17.5rem), 1fr));
 }
 
 .tools-grid,
 .flow-grid {
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15.625rem), 1fr));
 }
 
 .summary-card,
@@ -104,7 +104,7 @@ button:disabled {
   display: grid;
   gap: 10px;
   min-height: 140px;
-  padding: 22px;
+  padding: var(--panel-padding, 22px);
 }
 
 .summary-card strong {
@@ -115,7 +115,7 @@ button:disabled {
 .panel {
   display: grid;
   gap: 20px;
-  padding: 22px;
+  padding: var(--panel-padding, 22px);
 }
 
 .section-heading h2 {
@@ -130,6 +130,7 @@ button:disabled {
 .service-card,
 .flow-card {
   display: grid;
+  align-content: start;
   gap: 16px;
   min-height: 220px;
   padding: 18px;
@@ -236,3 +237,5 @@ code {
     white-space: normal;
   }
 }
+
+.service-card-header { flex-wrap: wrap; }

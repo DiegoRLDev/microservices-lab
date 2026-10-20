@@ -27,7 +27,7 @@
 
 .page-header h1 {
   margin-top: 8px;
-  font-size: 2rem;
+  font-size: var(--page-title-size, 2rem);
   line-height: 1.15;
 }
 
@@ -47,7 +47,7 @@
 
 .content-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 28rem), 1fr));
   gap: 16px;
 }
 
@@ -58,12 +58,12 @@
   border-radius: 8px;
   background: var(--color-surface);
   box-shadow: var(--shadow-soft);
-  padding: 22px;
+  padding: var(--panel-padding, 22px);
 }
 
 .filters-form {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) minmax(220px, 1.2fr) minmax(120px, 0.4fr) auto;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
   gap: 14px;
   align-items: end;
 }
@@ -223,6 +223,8 @@ dd {
 
 pre {
   overflow: auto;
+  max-width: 100%;
+  white-space: pre;
   border: 1px solid var(--color-border);
   border-radius: 8px;
   background: #111827;
@@ -232,13 +234,6 @@ pre {
   margin: 0;
   max-height: 360px;
   padding: 14px;
-}
-
-@media (max-width: 1050px) {
-  .filters-form,
-  .content-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 700px) {

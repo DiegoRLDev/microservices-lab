@@ -37,3 +37,35 @@ select,
 textarea {
   font: inherit;
 }
+
+/* Grid/flex children must shrink before tables and JSON scroll locally. */
+:where(mlab-root, main, section, article, header, form, nav, label, dl, dl > div, .payload-block, .table-wrap) {
+  min-width: 0;
+}
+:where(.page-header, .dashboard-header, .section-heading, .service-card-header, .price-row, .panel, .content-grid, .service-card) > * {
+  min-width: 0;
+}
+:where(h1, h2, h3, p, dd, code, .feedback, .state-message, .flow-card li) {
+  overflow-wrap: anywhere;
+}
+:where(button, input, select, textarea) {
+  max-width: 100%;
+  min-height: 44px;
+}
+:where(input, select, textarea) { min-width: 0; font-size: 1rem; }
+button { white-space: normal; }
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 3px;
+}
+.nav-list a { min-height: 44px; }
+.table-wrap { max-width: 100%; overscroll-behavior-x: contain; }
+.table-wrap .link-action { min-width: 5rem; white-space: nowrap; }
+td { overflow-wrap: anywhere; }
+.panel { align-content: start; }
+@media (max-width: 700px) {
+  :root { --panel-padding: 16px; --page-title-size: 1.65rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
+}

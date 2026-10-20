@@ -21,7 +21,7 @@
 
 .dashboard-header h1 {
   margin: 8px 0;
-  font-size: 2rem;
+  font-size: var(--page-title-size, 2rem);
   line-height: 1.15;
 }
 
@@ -57,7 +57,7 @@ button:disabled {
 .overview-grid,
 .service-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13.75rem), 1fr));
   gap: 16px;
 }
 
@@ -75,7 +75,7 @@ button:disabled {
   align-content: start;
   gap: 10px;
   min-height: 150px;
-  padding: 22px;
+  padding: var(--panel-padding, 22px);
 }
 
 .summary-card strong {
@@ -100,7 +100,7 @@ button:disabled {
 .status-section {
   display: grid;
   gap: 20px;
-  padding: 22px;
+  padding: var(--panel-padding, 22px);
 }
 
 .section-heading {
@@ -175,3 +175,5 @@ button:disabled {
     white-space: normal;
   }
 }
+
+.service-card { flex-wrap: wrap; }

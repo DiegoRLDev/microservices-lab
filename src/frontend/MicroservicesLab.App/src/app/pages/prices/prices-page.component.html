@@ -94,7 +94,7 @@
     @if (recentUpdates().length === 0) {
       <p class="state-message">Nenhum evento recebido nesta sessao.</p>
     } @else {
-      <div class="table-wrap">
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Historico de precos SSE">
         <table>
           <thead>
             <tr>
