@@ -1,6 +1,7 @@
 import { Component, ElementRef, HostListener, ViewChild, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { ThemeService } from './core/theme.service';
 
 interface NavItem {
   label: string;
@@ -15,6 +16,7 @@ interface NavItem {
   styleUrl: './app.component.css'
 })
 export class AppComponent {
+  protected readonly theme = inject(ThemeService);
   protected readonly menuOpen = signal(false);
   @ViewChild('menuButton') private menuButton?: ElementRef<HTMLButtonElement>;
   @ViewChild('mainContent') private mainContent?: ElementRef<HTMLElement>;

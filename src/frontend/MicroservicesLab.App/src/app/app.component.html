@@ -28,6 +28,39 @@
         </a>
       }
     </nav>
+    <details class="appearance">
+      <summary>Aparencia</summary>
+      <fieldset class="theme-modes">
+        <legend>Tema</legend>
+        @for (mode of theme.modes; track mode.value) {
+          <label>
+            <input type="radio" name="theme-mode" [value]="mode.value"
+              [checked]="theme.preferences().mode === mode.value" (change)="theme.setMode(mode.value)">
+            <span>{{ mode.label }}</span>
+          </label>
+        }
+      </fieldset>
+      <fieldset class="accent-options">
+        <legend>Cor de destaque</legend>
+        <div class="swatches">
+          @for (accent of theme.accents; track accent.value) {
+            <button type="button" class="swatch" [style.--swatch]="accent.value"
+              [attr.aria-label]="accent.label" [title]="accent.label"
+              [attr.aria-pressed]="theme.preferences().accent === accent.value"
+              (click)="theme.setAccent(accent.value)"><span aria-hidden="true"></span></button>
+          }
+        </div>
+        <label class="custom-color">Cor personalizada
+          <input type="color" aria-label="Selecionar cor personalizada" [value]="theme.preferences().accent"
+            (input)="theme.setAccent($any($event.target).value)">
+        </label>
+        <label class="hex-color">Hexadecimal
+          <input type="text" aria-label="Cor hexadecimal" maxlength="7" pattern="#[0-9a-fA-F]{6}"
+            [value]="theme.preferences().accent" (change)="theme.setAccent($any($event.target).value)"
+            spellcheck="false" autocapitalize="off">
+        </label>
+      </fieldset>
+    </details>
   </aside>
 
   <main #mainContent id="main-content" class="main-content" tabindex="-1">

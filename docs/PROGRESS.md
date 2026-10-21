@@ -4,7 +4,7 @@ O laboratorio esta organizado em quatro partes:
 
 - Parte I - Microservices Fundamentals: Fases 0-12.
 - Parte II - Realtime Distributed Systems: Fases 13-22, iniciada na FASE 13 depois do fechamento da Parte I.
-- Parte III - Aplicacao Angular: Fases 23-30 concluidas; Fase 31 planejada para temas e personalizacao visual.
+- Parte III - Aplicacao Angular: Fases 23-30 concluidas; Fase 31 implementada e testada, com verificacao visual pendente.
 - Parte IV - Consistencia distribuida: Fase 32 planejada; diagnostico da antiga Fase 31 preservado, sem implementacao.
 
 ## Parte I - Microservices Fundamentals
@@ -56,7 +56,7 @@ O laboratorio esta organizado em quatro partes:
 | 29.2 | Testes integrados e cenarios de falha | Concluido |
 | 29.3 | Revisao tecnica e documentacao | Concluido |
 | 30 | Responsividade e ajustes visuais Angular | Concluido |
-| 31 | Temas e personalizacao visual | Pendente |
+| 31 | Temas e personalizacao visual | Concluido (validacao visual pendente) |
 
 ## Parte IV - Consistencia distribuida
 
@@ -72,12 +72,28 @@ Nesta reorganizacao foram alterados somente estes dois documentos. Nenhuma funci
 
 ## FASE 31 - Temas e personalizacao visual
 
-Status: Pendente; nao iniciada. Escopo planejado da Parte III:
+Status: Implementacao e testes concluidos em 20/10/2026; verificacao visual pendente. Branch feature/part-3, arvore inicialmente limpa.
 
-- Temas claro, escuro e automatico.
-- Cores de destaque personalizaveis.
-- Persistencia local das preferencias.
-- Testes dos temas, personalizacao e persistencia.
+- Temas claro (paleta anterior preservada), escuro e automatico via prefers-color-scheme; tokens CSS compartilhados pelas seis paginas, incluindo campos, payload, sombras e estados semanticos.
+- Painel Aparencia recolhivel na navegacao, acessivel em desktop/mobile, com radios nativos, swatches nomeados/aria-pressed, seletor de cor e campo hexadecimal validado. Sem biblioteca adicional ou alteracao do layout das paginas.
+- Nove cores predefinidas: verde padrao, azul, roxo, laranja, vermelho, ciano, amarelo (#EAB308), rosa (#EC4899) e grafite (#374151). As seis anteriores foram preservadas. Destaque aplicado em acoes, links, foco, selecao e highlight de precos; sucesso/erro/alerta e estados operacionais conservam cores proprias, adaptadas ao tema.
+- localStorage na chave microserviceslab.appearance, com normalizacao e fallback para automatico/verde diante de dados invalidos. Falha de acesso/persistencia nao impede alteracoes na sessao.
+- public/theme.js e carregado sincronamente no head antes do Angular e das folhas de estilo. O ThemeService reutiliza suas funcoes, sem duplicar o algoritmo de paleta; atualiza preferencias por signals e remove o listener de sistema ao ser destruido.
+- Cor escolhida preservada no preenchimento. Texto de botao preto/branco pelo maior contraste; variante de links/foco ajustada ate 4.5:1 contra fundo, superficie e destaque suave. Botoes preenchidos recebem contorno interno para cores extremas. Isso nao equivale a uma auditoria WCAG completa.
+
+Validacao:
+
+- pnpm test:ci: 52/52 aprovados (45 da implementacao inicial e 7 deste complemento), incluindo template real, modo automatico, persistencia/restauracao, armazenamento indisponivel, dados invalidos, cores personalizadas, contraste e limpeza do listener.
+- Complemento das cores: 18/18 testes direcionados do ThemeService aprovados; selecao por swatch e persistencia das tres novas cores verificadas em testes do template real. A verificacao de contraste inclui os nove presets em claro/escuro; o grafite conserva o valor escolhido e recebe variante mais clara de texto/foco no escuro pelo algoritmo existente. Seletor personalizado e paleta semantica inalterados.
+- pnpm build: aprovado, sem erro de compilacao ou estouro de budget.
+- Servidor Angular isolado em http://127.0.0.1:4202; pagina, theme.js, main.js e styles.css respondem HTTP 200. Servicos Docker existentes nao foram reiniciados nem reconstruidos.
+- Verificacao visual real claro/escuro em desktop/mobile NAO concluida: a ferramenta de navegador apresentou timeouts ao recarregar a aba e ao abrir a nova instancia, apesar dos assets acessiveis. Nao afirmar ausencia de overflow nem validacao visual com base apenas em jsdom/build.
+- Pendente: abrir Aparencia, alternar claro/escuro/automatico e as nove cores nas seis paginas em desktop/mobile; testar branco/preto personalizados, seletor nativo, teclado e recarga. Alteracao real do tema do sistema e flash entre frames tambem nao foram observados visualmente; a restauracao pre-Angular e o listener estao cobertos por testes. Este complemento nao repetiu a tentativa de validacao visual; selecao/persistencia foram verificadas automaticamente.
+- Testes .NET/Go e integracao completa nao executados: backend, contratos, HTTP, polling, SSE, dependencias e Docker nao foram alterados.
+
+Arquivos: public/theme.js; core/theme.service.ts e seu spec; app.component.ts/html/css/spec; styles.css; index.html; test-setup.ts; CSS de Dashboard, Produtos, Pedidos, Precos, Auditoria e Observabilidade; ROADMAP e PROGRESS.
+
+Sem git add, commit, push ou troca de branch. Fase 32 nao iniciada; diagnostico de consistencia abaixo preservado.
 
 ## FASE 32 - Diagnostico preservado de consistencia distribuida
 
@@ -129,7 +145,7 @@ Alteracoes da analise original (antiga Fase 31, agora incorporada ao planejament
 
 ## FASE 30 - Responsividade Angular
 
-Status: Concluido. Implementacao e validacoes realizadas em 20/10/2026; status consolidado na reorganizacao por confirmacao do usuario. As novas Fases 31 (temas) e 32 (consistencia distribuida) permanecem pendentes.
+Status: Concluido. Implementacao e validacoes realizadas em 20/10/2026; status consolidado na reorganizacao por confirmacao do usuario. Naquela reorganizacao, as novas Fases 31 (temas) e 32 (consistencia distribuida) ainda estavam pendentes.
 
 Diagnostico inicial:
 

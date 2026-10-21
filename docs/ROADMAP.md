@@ -57,7 +57,7 @@ A Parte III adiciona uma aplicacao Angular para interagir com o laboratorio. A i
 | 29.2 | Testes integrados e cenarios de falha | Concluido |
 | 29.3 | Revisao tecnica e documentacao | Concluido |
 | 30 | Responsividade e ajustes visuais Angular | Concluido |
-| 31 | Temas e personalizacao visual | Pendente |
+| 31 | Temas e personalizacao visual | Concluido (validacao visual pendente) |
 
 ## Objetivo da Parte III
 
@@ -85,7 +85,7 @@ O front-end deve consumir as APIs existentes sem introduzir API Gateway, BFF, au
 | 29.2 | Testes integrados e cenarios de falha | Validar fluxos integrados e falhas controladas do laboratorio. | Concluido |
 | 29.3 | Revisao tecnica e documentacao | Revisar a Parte III e consolidar documentacao tecnica. | Concluido |
 | 30 | Responsividade e ajustes visuais Angular | Ajustar a experiencia visual e responsiva da aplicacao. | Concluido |
-| 31 | Temas e personalizacao visual | Temas claro, escuro e automatico, cores de destaque personalizaveis, persistencia local e testes. | Pendente |
+| 31 | Temas e personalizacao visual | Temas claro, escuro e automatico, cores de destaque personalizaveis, persistencia local e testes. | Concluido (validacao visual pendente) |
 
 ### Fase 28.1 - Auditoria
 
@@ -127,7 +127,7 @@ Escopo:
 
 A Fase 29.2 possui script e relatorio em [INTEGRATION_TESTS.md](INTEGRATION_TESTS.md).
 As regressoes e 8 cenarios automatizados integrados passaram. O bloqueio inicial do Docker foi resolvido; telas Angular e reconexao EventSource foram verificadas no navegador apos correcao da recuperacao SSE. A interrupcao do Kafka foi omitida pelo risco conhecido de consistencia.
-Fases 23-30 concluidas. A nova Fase 31 (temas) e a Fase 32 (consistencia distribuida) permanecem pendentes.
+Fases 23-30 concluidas. A Fase 31 possui implementacao e testes concluidos, com verificacao visual pendente; a Fase 32 (consistencia distribuida) permanece pendente.
 
 ### Fase 29.3 - Revisao tecnica e documentacao
 
@@ -146,16 +146,17 @@ Status: Concluido, consolidado conforme confirmacao do usuario na reorganizacao 
 - Tabelas com scroll localizado acessivel por teclado; payload JSON preserva formatacao e scroll proprio.
 - Navegador verificado em 360, 390, 430, 768, 1024, 1280 e 1920px, sem instalar ferramentas E2E.
 - Evidencias, limitacoes e checklist manual: [PROGRESS](PROGRESS.md#fase-30---responsividade-angular). Dispositivos fisicos/teclados virtuais nao validados.
-- Sem alteracoes de backend, contratos, polling, SSE ou regras de negocio. Novas Fases 31 e 32 nao iniciadas.
+- Sem alteracoes de backend, contratos, polling, SSE ou regras de negocio. Na conclusao da Fase 30, as novas Fases 31 e 32 ainda nao haviam sido iniciadas.
 
 ### Fase 31 - Temas e personalizacao visual
 
-Status: Pendente; nao iniciada.
+Status: Implementacao e testes concluidos em 20/10/2026; verificacao visual desktop/mobile pendente por timeouts da ferramenta de navegador.
 
-- Temas claro, escuro e automatico.
-- Cores de destaque personalizaveis.
-- Persistencia local das preferencias.
-- Testes dos comportamentos implementados futuramente.
+- Tokens CSS de superficies, textos, bordas, sombras e estados nas seis paginas; modo automatico acompanha prefers-color-scheme.
+- Controle Aparencia na navegacao, com radios de tema, nove cores predefinidas (incluindo amarelo #EAB308, rosa #EC4899 e grafite #374151), seletor nativo e entrada hexadecimal.
+- Preferencias no localStorage; theme.js sincrono no head aplica o tema antes do Angular, reutilizando a mesma logica de normalizacao e contraste.
+- Cor de preenchimento preservada; texto de botao preto/branco e variante de texto/foco com contraste calculado. Cores semanticas independentes do destaque.
+- 52 testes Angular aprovados e build de producao aprovado, incluindo selecao/persistencia das novas cores e adaptacao de contraste do grafite no escuro. Evidencias e limitacoes em [PROGRESS](PROGRESS.md#fase-31---temas-e-personalizacao-visual).
 
 Esta fase pertence a Parte III e nao inclui consistencia entre pedidos e estoque.
 

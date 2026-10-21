@@ -7,8 +7,44 @@
   --color-muted: #5f6b7a;
   --color-primary: #0f766e;
   --color-primary-strong: #115e59;
-  --color-accent: #1d4ed8;
+  --color-accent: #115e59;
+  --color-on-primary: #ffffff;
+  --color-primary-soft: #e7f4f2;
+  --color-success-bg: #dcfce7;
+  --color-success: #166534;
+  --color-error-bg: #fee4e2;
+  --color-error: #b42318;
+  --color-warning-bg: #fff7cc;
+  --color-warning: #854d0e;
+  --color-info-bg: #eef6ff;
+  --color-info: #175cd3;
+  --color-neutral-bg: #eef2f6;
+  --color-neutral: #475467;
+  --color-code-bg: #111827;
+  --color-code-text: #f9fafb;
   --shadow-soft: 0 12px 30px rgba(23, 32, 51, 0.08);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #161819;
+  --color-surface: #202225;
+  --color-border: #53575d;
+  --color-text: #f0f1f2;
+  --color-muted: #b3b8c0;
+  --color-success-bg: #173b2b;
+  --color-success: #92e8b1;
+  --color-error-bg: #492526;
+  --color-error: #ffb4ad;
+  --color-warning-bg: #43381b;
+  --color-warning: #f5d778;
+  --color-info-bg: #21364e;
+  --color-info: #a7ceff;
+  --color-neutral-bg: #303338;
+  --color-neutral: #c4cad2;
+  --color-code-bg: #101112;
+  --color-code-text: #eceff2;
+  --shadow-soft: 0 12px 30px rgba(0, 0, 0, 0.24);
 }
 
 * {
@@ -54,7 +90,13 @@ textarea {
 }
 :where(input, select, textarea) { min-width: 0; font-size: 1rem; }
 button { white-space: normal; }
-:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+.primary-action, .dashboard-page button, .observability-page button, .brand-mark {
+  box-shadow: inset 0 0 0 1px var(--color-accent);
+}
+.nav-list a.active, .table-wrap tr.selected {
+  box-shadow: inset 3px 0 0 var(--color-accent);
+}
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
   outline: 3px solid var(--color-accent);
   outline-offset: 3px;
 }

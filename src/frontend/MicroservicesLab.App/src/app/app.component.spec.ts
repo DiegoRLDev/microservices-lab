@@ -73,4 +73,49 @@ describe('Responsive navigation', () => {
     expect(router.url).toBe('/produtos');
     expect(document.activeElement).toBe(fixture.nativeElement.querySelector('main'));
   });
+
+  it.each([
+    ['Amarelo', '#eab308'], ['Rosa', '#ec4899'], ['Grafite', '#374151']
+  ])('selects the %s swatch and persists it', (name, color) => {
+    const root: HTMLElement = fixture.nativeElement;
+    root.querySelector('details')!.open = true;
+    expect(root.querySelectorAll('.swatch')).toHaveLength(9);
+    const swatch = root.querySelector<HTMLButtonElement>(`button[aria-label="${name}"]`)!;
+    swatch.click();
+    fixture.detectChanges();
+    expect(swatch.getAttribute('aria-pressed')).toBe('true');
+    expect(root.querySelectorAll('.swatch[aria-pressed="true"]')).toHaveLength(1);
+    expect(root.querySelector<HTMLInputElement>('input[type="color"]')!.value).toBe(color);
+    expect(JSON.parse(localStorage.getItem('microserviceslab.appearance')!).accent).toBe(color);
+    localStorage.removeItem('microserviceslab.appearance');
+  });
+
+  it('exposes labeled appearance controls and applies theme, preset and custom color', () => {
+    const root: HTMLElement = fixture.nativeElement;
+    const disclosure = root.querySelector('details')!;
+    disclosure.open = true;
+    const dark = root.querySelector<HTMLInputElement>('input[value="dark"]')!;
+    dark.click();
+    fixture.detectChanges();
+    expect(dark.checked).toBe(true);
+    expect(document.documentElement.dataset['theme']).toBe('dark');
+    const blue = root.querySelector<HTMLButtonElement>('button[aria-label="Azul"]')!;
+    blue.click();
+    fixture.detectChanges();
+    expect(blue.getAttribute('aria-pressed')).toBe('true');
+    expect(root.querySelectorAll('.swatch[aria-pressed="true"]')).toHaveLength(1);
+    const picker = root.querySelector<HTMLInputElement>('input[type="color"]')!;
+    picker.value = '#ffffff';
+    picker.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(root.querySelector<HTMLInputElement>('input[aria-label="Cor hexadecimal"]')!.value).toBe('#ffffff');
+    expect(root.querySelectorAll('.swatch[aria-pressed="true"]')).toHaveLength(0);
+    const hex = root.querySelector<HTMLInputElement>('input[aria-label="Cor hexadecimal"]')!;
+    hex.value = '#abcdef';
+    hex.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(picker.value).toBe('#abcdef');
+    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('#abcdef');
+    localStorage.removeItem('microserviceslab.appearance');
+  });
 });
