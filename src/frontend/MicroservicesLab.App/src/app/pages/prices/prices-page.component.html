@@ -1,0 +1,119 @@
+<section class="prices-page">
+  <header class="page-header">
+    <div>
+      <span>Fase 27</span>
+      <h1>Precos realtime</h1>
+      <p>
+        Compare o snapshot REST processado pelo Pricing.Service com as atualizacoes
+        SSE recebidas diretamente do PriceFeed.Service.
+      </p>
+    </div>
+
+    <button type="button" class="primary-action" (click)="loadRestSnapshot()" [disabled]="restStatus() === 'loading'">
+      {{ restStatus() === 'loading' ? 'Atualizando...' : 'Atualizar snapshot' }}
+    </button>
+  </header>
+
+  <div class="content-grid">
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <h2>REST via Pricing.Service</h2>
+          <p>Ultimos precos processados a partir do topico Kafka `price-updated`.</p>
+        </div>
+        @if (restUpdatedAt()) {
+          <span>{{ restUpdatedAt() | date:'shortTime':'':'pt-BR' }}</span>
+        }
+      </div>
+
+      @if (restStatus() === 'loading') {
+        <p class="state-message">Carregando precos processados...</p>
+      } @else if (restStatus() === 'error') {
+        <p class="feedback error">{{ restError() }}</p>
+      } @else if (!hasRestPrices()) {
+        <p class="state-message">Nenhum preco processado pelo Pricing.Service ainda.</p>
+      } @else {
+        <div class="price-list">
+          @for (price of restPrices(); track price.symbol) {
+            <article class="price-row">
+              <div>
+                <strong>{{ price.symbol }}</strong>
+                <span>{{ price.occurredAt | date:'mediumTime':'':'pt-BR' }}</span>
+              </div>
+              <p>{{ priceAmount(price.price) | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</p>
+            </article>
+          }
+        </div>
+      }
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <h2>SSE direto do PriceFeed</h2>
+          <p>Atualizacoes recebidas sem recarregar a pagina pelo stream `/prices/stream`.</p>
+        </div>
+        <span [class]="connectionClass(connection().status)">
+          {{ connectionLabel(connection().status) }}
+        </span>
+      </div>
+
+      <p class="connection-message">{{ connection().message }}</p>
+
+      @if (invalidPayloadError()) {
+        <p class="feedback error">{{ invalidPayloadError() }}</p>
+      }
+
+      @if (!hasLivePrices()) {
+        <p class="state-message">Aguardando primeiras atualizacoes SSE...</p>
+      } @else {
+        <div class="price-list live">
+          @for (price of livePriceRows(); track price.symbol) {
+            <article class="price-row" [class.highlight]="isHighlighted(price.symbol)">
+              <div>
+                <strong>{{ price.symbol }}</strong>
+                <span>{{ price.occurredAt | date:'mediumTime':'':'pt-BR' }}</span>
+              </div>
+              <p>{{ priceAmount(price.price) | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</p>
+            </article>
+          }
+        </div>
+      }
+    </section>
+  </div>
+
+  <section class="panel updates-panel">
+    <div class="section-heading">
+      <div>
+        <h2>Ultimas atualizacoes SSE</h2>
+        <p>Eventos `price-update` recebidos diretamente do PriceFeed.Service.</p>
+      </div>
+      <span>{{ recentUpdates().length }} evento(s)</span>
+    </div>
+
+    @if (recentUpdates().length === 0) {
+      <p class="state-message">Nenhum evento recebido nesta sessao.</p>
+    } @else {
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Historico de precos SSE">
+        <table>
+          <thead>
+            <tr>
+              <th>Simbolo</th>
+              <th>Preco</th>
+              <th>Ocorrido em</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (update of recentUpdates(); track update.symbol + update.occurredAt) {
+              <tr>
+                <td>{{ update.symbol }}</td>
+                <td>{{ priceAmount(update.price) | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+                <td>{{ update.occurredAt | date:'medium':'':'pt-BR' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</section>

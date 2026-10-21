@@ -1,0 +1,42 @@
+{
+  "/api/order": {
+    "target": "http://localhost:5074",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": {
+      "^/api/order": ""
+    }
+  },
+  "/api/inventory": {
+    "target": "http://localhost:5276",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": {
+      "^/api/inventory": ""
+    }
+  },
+  "/api/pricefeed": {
+    "target": "http://localhost:5080",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": {
+      "^/api/pricefeed": ""
+    }
+  },
+  "/api/pricing": {
+    "target": "http://localhost:5090",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": {
+      "^/api/pricing": ""
+    }
+  },
+  "/api/audit": {
+    "target": "http://localhost:5288",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": {
+      "^/api/audit": ""
+    }
+  }
+}

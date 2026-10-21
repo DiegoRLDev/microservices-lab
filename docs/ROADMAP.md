@@ -41,6 +41,163 @@ Entre a FASE 14 e a FASE 15 existe um mini-lab concluido de gRPC Server Streamin
 | 21 | Realtime observability | Pendente |
 | 22 | Load e chaos testing | Pendente |
 
+## Parte III - Aplicacao Angular
+
+A Parte III adiciona uma aplicacao Angular para interagir com o laboratorio. A interface deve ser um painel tecnico e demonstravel, nao um ERP ou produto comercial.
+
+| Fase | Descricao | Status |
+| ---- | --------- | ------ |
+| 23 | Angular, estrutura inicial e Docker Compose | Concluido |
+| 24 | Dashboard e navegacao | Concluido |
+| 25 | Produtos e estoque | Concluido |
+| 26 | Pedidos e pagamentos | Concluido |
+| 27 | Precos realtime (SSE) | Concluido |
+| 28 | Auditoria e observabilidade | Concluido |
+| 29.1 | Testes automatizados Angular | Concluido |
+| 29.2 | Testes integrados e cenarios de falha | Concluido |
+| 29.3 | Revisao tecnica e documentacao | Concluido |
+| 30 | Responsividade e ajustes visuais Angular | Concluido |
+| 31 | Temas e personalizacao visual | Concluido (validacao visual pendente) |
+
+## Objetivo da Parte III
+
+Construir uma aplicacao front-end simples e funcional para operar os fluxos ja existentes do MicroservicesLab:
+
+- visualizar o estado geral do laboratorio;
+- cadastrar e consultar produtos;
+- criar pedidos e acompanhar pagamentos assincronos;
+- observar precos realtime via SSE;
+- expor auditoria e observabilidade de forma didatica quando as APIs necessarias existirem.
+
+O front-end deve consumir as APIs existentes sem introduzir API Gateway, BFF, autenticacao ou novas regras de negocio antes de haver necessidade concreta.
+
+## Planejamento das Fases 23-31
+
+| Fase | Nome | Objetivo principal | Status |
+| ---- | ---- | ------------------ | ------ |
+| 23 | Angular, estrutura inicial e Docker Compose | Criar a base Angular, rotas iniciais, configuracao de APIs e integracao com Docker Compose. | Concluido |
+| 24 | Dashboard e navegacao | Evoluir a tela inicial e a navegacao com dados reais basicos do laboratorio. | Concluido |
+| 25 | Produtos e estoque | Consumir as APIs de produtos, cadastro, detalhes e disponibilidade quando fizer sentido para o lab. | Concluido |
+| 26 | Pedidos e pagamentos | Criar pedidos e acompanhar a evolucao assincrona do status. | Concluido |
+| 27 | Precos realtime (SSE) | Consumir o stream SSE do `PriceFeed.Service` e o estado atual do `Pricing.Service`. | Concluido |
+| 28 | Auditoria e observabilidade | Expor auditoria e links/leituras operacionais sem substituir Jaeger, Prometheus ou Grafana. | Concluido |
+| 29.1 | Testes automatizados Angular | Configurar testes unitarios/comportamentais do front-end sem depender de servicos externos. | Concluido |
+| 29.2 | Testes integrados e cenarios de falha | Validar fluxos integrados e falhas controladas do laboratorio. | Concluido |
+| 29.3 | Revisao tecnica e documentacao | Revisar a Parte III e consolidar documentacao tecnica. | Concluido |
+| 30 | Responsividade e ajustes visuais Angular | Ajustar a experiencia visual e responsiva da aplicacao. | Concluido |
+| 31 | Temas e personalizacao visual | Temas claro, escuro e automatico, cores de destaque personalizaveis, persistencia local e testes. | Concluido (validacao visual pendente) |
+
+### Fase 28.1 - Auditoria
+
+Status: Concluido
+
+Escopo:
+
+- API HTTP somente leitura no `Audit.Worker`;
+- consulta da tabela `audit_events` em `audit_db`;
+- filtros opcionais por tipo do evento e chave da mensagem;
+- tela Angular `/auditoria`;
+- preservacao do consumidor Kafka existente e da idempotencia por `EventId`.
+
+### Fase 28.2 - Observabilidade
+
+Status: Concluido
+
+Escopo:
+
+- tela Angular `/observabilidade`;
+- health checks reais para servicos HTTP existentes;
+- `Payment.Service` representado como nao monitorado por nao expor health HTTP nesta fase;
+- atalhos para Grafana, Prometheus e Jaeger usando portas publicadas no host;
+- visao estatica dos fluxos de pedidos, precos e observabilidade.
+
+### Fase 29.1 - Testes automatizados Angular
+
+Status: Concluido
+
+Escopo:
+
+- configuracao de Vitest com jsdom para execucao headless;
+- scripts `pnpm test` e `pnpm test:ci`;
+- testes de servicos HTTP com mocks;
+- testes do servico SSE com `EventSource` falso;
+- testes de pedidos, auditoria e observabilidade sem depender de Docker ou APIs reais.
+
+### Fase 29.2 - Testes integrados e cenarios de falha
+
+A Fase 29.2 possui script e relatorio em [INTEGRATION_TESTS.md](INTEGRATION_TESTS.md).
+As regressoes e 8 cenarios automatizados integrados passaram. O bloqueio inicial do Docker foi resolvido; telas Angular e reconexao EventSource foram verificadas no navegador apos correcao da recuperacao SSE. A interrupcao do Kafka foi omitida pelo risco conhecido de consistencia.
+Fases 23-30 concluidas. A Fase 31 possui implementacao e testes concluidos, com verificacao visual pendente; a Fase 32 (consistencia distribuida) permanece pendente.
+
+### Fase 29.3 - Revisao tecnica e documentacao
+
+Status: Concluido (20/10/2026).
+
+Revisao dos seis servicos, Angular, contratos, Compose, testes e documentacao: [relatorio tecnico](TECHNICAL_REVIEW.md).
+Correcoes localizadas: timeout de health HTTP, dependencia do frontend para Audit e shell fail-fast de kafka-init. Sem mudancas de negocio, contratos, processamento Kafka, layout ou Kubernetes.
+README consolidado; guias e diagramas atualizados; evidencias historicas preservadas em PROGRESS e INTEGRATION_TESTS.
+
+### Fase 30 - Responsividade Angular
+
+Status: Concluido, consolidado conforme confirmacao do usuario na reorganizacao do roadmap.
+
+- Implementados grids adaptativos, formularios e textos sem overflow global nas seis telas.
+- Menu mobile recolhivel ate 820px, com aria-expanded, foco, Escape e fechamento ao navegar; sidebar desktop preservada.
+- Tabelas com scroll localizado acessivel por teclado; payload JSON preserva formatacao e scroll proprio.
+- Navegador verificado em 360, 390, 430, 768, 1024, 1280 e 1920px, sem instalar ferramentas E2E.
+- Evidencias, limitacoes e checklist manual: [PROGRESS](PROGRESS.md#fase-30---responsividade-angular). Dispositivos fisicos/teclados virtuais nao validados.
+- Sem alteracoes de backend, contratos, polling, SSE ou regras de negocio. Na conclusao da Fase 30, as novas Fases 31 e 32 ainda nao haviam sido iniciadas.
+
+### Fase 31 - Temas e personalizacao visual
+
+Status: Implementacao e testes concluidos em 20/10/2026; verificacao visual desktop/mobile pendente por timeouts da ferramenta de navegador.
+
+- Tokens CSS de superficies, textos, bordas, sombras e estados nas seis paginas; modo automatico acompanha prefers-color-scheme.
+- Controle Aparencia na navegacao, com radios de tema, nove cores predefinidas (incluindo amarelo #EAB308, rosa #EC4899 e grafite #374151), seletor nativo e entrada hexadecimal.
+- Preferencias no localStorage; theme.js sincrono no head aplica o tema antes do Angular, reutilizando a mesma logica de normalizacao e contraste.
+- Cor de preenchimento preservada; texto de botao preto/branco e variante de texto/foco com contraste calculado. Cores semanticas independentes do destaque.
+- 52 testes Angular aprovados e build de producao aprovado, incluindo selecao/persistencia das novas cores e adaptacao de contraste do grafite no escuro. Evidencias e limitacoes em [PROGRESS](PROGRESS.md#fase-31---temas-e-personalizacao-visual).
+
+Esta fase pertence a Parte III e nao inclui consistencia entre pedidos e estoque.
+
+### Pendencias tecnicas preservadas
+
+- Payment.Service sem health HTTP; avaliar futuramente sua organizacao idiomatica Go, sem assumir defeito.
+- Recuperacao observada na Fase 29.2 nao garante recuperacao de erros fatais, exactly-once ou snapshot duravel do Pricing.
+- Interrupcao Kafka nao executada por risco operacional de persistir pedido antes de publicar.
+- Outros riscos localizados e lacunas de testes registrados na revisao 29.3, sem criar fases adicionais.
+
+## Parte IV - Consistencia distribuida
+
+| Fase | Descricao | Status |
+| ---- | --------- | ------ |
+| 32 | Consistencia entre pedidos e estoque | Pendente |
+
+### Fase 32 - Consistencia entre pedidos e estoque
+
+Status: Pendente; implementacao nao iniciada. O escopo e o diagnostico tecnico da antiga Fase 31 foram transferidos integralmente para esta fase. A reorganizacao nao autoriza implementacao automatica nem decide o desenho de persistencia/recuperacao.
+
+Reserva atomica e idempotente no Inventory e viavel com alteracoes locais, mas nao resolve as janelas entre gRPC, bancos independentes e Kafka. Timeout nao comprova que a operacao falhou. Compensacao apenas em catch pode devolver estoque de pedido ja publicado/pago.
+
+Para atender ao fluxo completo e necessario decidir sobre intencoes/estados duraveis, recuperacao apos reinicio, publicacao pendente persistida com o pedido e deduplicacao duravel do pagamento. Isso e mudanca arquitetural relevante, ainda nao autorizada como desenho concreto; nao foi implementado parcialmente.
+
+Alternativas para decisao:
+- Recomendada: fluxo duravel minimo, com reservas identificadas por operacao, transacoes locais, registro recuperavel de publicacoes/compensacoes e resultado de pagamento idempotente; sem framework de Saga ou plataforma Outbox completa. Requer migrations, evolucao aditiva de contratos e mecanismo de recuperacao.
+- Escopo reduzido: somente reserva atomica/idempotente local. Nao atende a Fase 32 completa e nao deve ser apresentada como consistencia distribuida garantida.
+
+Evidencias, cenarios e validacao necessaria, preservados da antiga Fase 31: [PROGRESS](PROGRESS.md#fase-32---diagnostico-preservado-de-consistencia-distribuida).
+
+Objetivos preservados, ainda nao implementados:
+
+- reservas atomicas e identificadas;
+- concorrencia e consistencia da quantidade disponivel;
+- idempotencia;
+- outbox minima;
+- deduplicacao de pagamentos;
+- compensacao de estoque em pagamento rejeitado ou falhas;
+- migrations para registros duraveis e constraints;
+- recuperacao de falhas, timeouts, reentregas e operacoes/publicacoes pendentes.
+
 ## Objetivo da Parte II
 
 Estudar sistemas distribuidos realtime com foco em fluxo continuo de dados, concorrencia, throughput, backpressure, processamento distribuido, consumer lag, particionamento, escalabilidade e comportamento sob carga/falhas.

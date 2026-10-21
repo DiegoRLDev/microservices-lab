@@ -6,6 +6,11 @@
 .vscode/
 TestResults/
 coverage/
+**/node_modules/
+**/dist/
+**/.angular/
+.cache/
+.pnpm-store/
 *.user
 *.suo
 *.log

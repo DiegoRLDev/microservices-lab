@@ -1,0 +1,76 @@
+<section class="dashboard-page">
+  <header class="dashboard-header">
+    <div>
+      <span>Fase 24</span>
+      <h1>Dashboard do laboratorio</h1>
+      <p>
+        Visao geral dos microsservicos HTTP disponiveis, com indicadores lidos
+        diretamente das APIs do MicroservicesLab.
+      </p>
+    </div>
+
+    <button type="button" (click)="refresh()" [disabled]="isRefreshing()">
+      {{ isRefreshing() ? 'Atualizando...' : 'Atualizar' }}
+    </button>
+  </header>
+
+  <div class="overview-grid" aria-label="Resumo do laboratorio">
+    @for (card of summaryCards(); track card.label) {
+      <article class="summary-card">
+        <span>{{ card.label }}</span>
+
+        @if (card.status === 'loading') {
+          <strong class="muted">Carregando</strong>
+        } @else if (card.status === 'error') {
+          <strong class="unavailable">Indisponivel</strong>
+          <p>{{ card.error }}</p>
+        } @else {
+          <strong>{{ card.value }}</strong>
+          @if (card.value === 0) {
+            <p>{{ card.emptyText }}</p>
+          }
+        }
+      </article>
+    }
+
+    <article class="summary-card service-summary">
+      <span>Servicos HTTP online</span>
+      <strong>{{ onlineServices() }} / {{ health().length }}</strong>
+      <p>Order, Inventory, PriceFeed e Pricing.</p>
+    </article>
+  </div>
+
+  <section class="status-section">
+    <div class="section-heading">
+      <div>
+        <h2>Status dos servicos</h2>
+        <p>Health checks acessiveis pelo front-end.</p>
+      </div>
+
+      @if (lastUpdatedAt()) {
+        <span>Atualizado em {{ lastUpdatedAt() | date:'HH:mm:ss' }}</span>
+      }
+    </div>
+
+    <div class="service-grid">
+      @for (service of health(); track service.name) {
+        <article class="service-card" [class.online]="service.status === 'online'" [class.offline]="service.status === 'offline'">
+          <div>
+            <h3>{{ service.name }}</h3>
+            <p>{{ service.url }}</p>
+          </div>
+
+          <span class="status-pill">
+            @if (service.status === 'loading') {
+              Verificando
+            } @else if (service.status === 'online') {
+              Online
+            } @else {
+              Offline
+            }
+          </span>
+        </article>
+      }
+    </div>
+  </section>
+</section>

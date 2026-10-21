@@ -1,490 +1,167 @@
 # Executando Localmente
 
-Este guia e o caminho rapido para executar o ambiente atual do MicroservicesLab.
+Caminho recomendado: Docker Compose completo. Os comandos partem da raiz do repositorio e usam PowerShell. Para requisitos e portas publicadas veja tambem o [README](../../README.md).
 
-Guias relacionados:
-
-- [Quick Reference](QUICK-REFERENCE.md)
-- [Troubleshooting](TROUBLESHOOTING.md)
-- [Labs](../labs/README.md)
-
-## Execucao rapida com Docker Compose
-
-Esta e a forma recomendada a partir da FASE 8. Os comandos assumem PowerShell aberto na raiz do repositorio `MicroservicesLab`.
-
-Subir tudo com rebuild:
+## Docker Compose
 
 ```powershell
+docker compose config --quiet
 docker compose up -d --build
+docker compose ps --all
+docker compose logs --tail=60 order-service payment-service audit-worker
 ```
 
-Rebuildar e subir novamente:
+Angular: [localhost:4200](http://localhost:4200). Nao suba simultaneamente o Kafka isolado de `infra/kafka` nem outro PostgreSQL na porta 5432: sao modos alternativos, nao dependencias adicionais.
+
+- Rede implicita: `microservices-lab_default`; servicos usam DNS interno.
+- Kafka interno: `kafka:29092`; clientes no host: `localhost:9092`.
+- Inventory gRPC interno: HTTP/2 sem TLS em `inventory-service:8081`, host 7242. Execucao local usa o perfil HTTPS, explicado abaixo.
+- Topicos: `order-created`, `payment-approved`, `payment-rejected`, `price-updated`, com tres partitions, fator de replicacao 1.
+- `kafka-init` cria topicos com `--if-not-exists`, encerra e deve exibir Exited (0). Erro intermediario agora interrompe o shell.
+- Frontend espera Order, Inventory, Pricing e a inicializacao dos containers PriceFeed/Audit. Isso nao substitui readiness HTTP.
+- As healthchecks Docker das APIs .NET testam TCP. HTTP `/health` testa banco em Order, Inventory e Audit; PriceFeed/Pricing nao atestam consumo Kafka.
+
+## Verificacao somente leitura
 
 ```powershell
-docker compose up -d --build
+Invoke-RestMethod http://localhost:5074/health/ready
+Invoke-RestMethod http://localhost:5276/health/ready
+Invoke-RestMethod http://localhost:5288/health
+Invoke-RestMethod http://localhost:5080/health
+Invoke-RestMethod http://localhost:5090/health
+Invoke-RestMethod http://localhost:4200/api/inventory/products
+Invoke-RestMethod http://localhost:4200/api/order/orders
+Invoke-RestMethod http://localhost:4200/api/pricing/prices
+Invoke-RestMethod 'http://localhost:4200/api/audit/audit-events?limit=5'
+curl.exe -N --max-time 3 http://localhost:4200/api/pricefeed/prices/stream
 ```
 
-Ver status:
+O curl do stream e limitado a 3s e normalmente termina com codigo 28 (timeout intencional de um stream continuo). Payment nao possui health HTTP: use status/logs, sem inferir prontidao apenas por estar running.
 
 ```powershell
-docker compose ps
+docker compose exec -T kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:29092 --list
+docker compose exec -T postgres psql -U postgres -d postgres -c "SELECT datname FROM pg_database WHERE datname IN ('order_db','inventory_db','audit_db') ORDER BY datname;"
 ```
 
-Ver todos os logs:
+## Persistencia e operacao
 
-```powershell
-docker compose logs
-```
+PostgreSQL usa `postgres_data` e Kafka usa `kafka_data`, prefixados pelo nome do projeto Compose. Bancos reais:
 
-Acompanhar logs:
+| Servico | Connection string (ambiente local didatico) |
+| --- | --- |
+| Order | `Host=postgres;Port=5432;Database=order_db;Username=postgres;Password=postgres` |
+| Inventory | `Host=postgres;Port=5432;Database=inventory_db;Username=postgres;Password=postgres` |
+| Audit | `Host=postgres;Port=5432;Database=audit_db;Username=postgres;Password=postgres` |
 
-```powershell
-docker compose logs -f
-```
+Nos appsettings locais, Host e localhost; nomes dos bancos permanecem iguais. `init-databases.sql` executa apenas em volume PostgreSQL novo. O Compose aplica migrations existentes automaticamente. Nao crie `orders_db` nem recrie bancos existentes para resolver divergencias.
 
-Acompanhar logs de um servico:
+Prometheus/Grafana/Jaeger nao possuem volumes nomeados de retencao configurados como PostgreSQL/Kafka; nao sao armazenamento de auditoria. Credenciais/portas sao de laboratorio, sem endurecimento para producao.
+
+Comandos deliberados de operacao (interrompem servicos; nao sao parte do smoke):
 
 ```powershell
 docker compose logs -f order-service
-docker compose logs -f payment-service
-docker compose logs -f audit-worker
-```
-
-Rodar labs de resiliencia da FASE 9:
-
-```text
-docs/guides/RESILIENCE.md
-```
-
-Rodar labs de observabilidade da FASE 10:
-
-```text
-docs/guides/OBSERVABILITY.md
-```
-
-Rodar o laboratorio Kubernetes da FASE 11:
-
-```text
-docs/guides/KUBERNETES.md
-```
-
-Parar tudo sem apagar volumes:
-
-```powershell
+docker compose restart order-service
+docker compose up -d --build frontend
 docker compose down
 ```
 
-Reiniciar um servico:
+`down` preserva os volumes nomeados. **Nao usar down -v, prune ou remover volumes como troubleshooting**: isso apaga bancos, mensagens e offsets. Nenhum desses comandos destrutivos e necessario para executar os testes.
+
+## Desenvolvimento Angular
+
+Com APIs ativas:
 
 ```powershell
-docker compose restart order-service
+Push-Location .\src\frontend\MicroservicesLab.App
+pnpm install --frozen-lockfile
+pnpm start --port 4201
+Pop-Location
 ```
 
-Rebuildar somente um servico:
+Use 4201 se o frontend Docker ja ocupar 4200; sem conflito, `pnpm start` usa 4200. O comando permanece ativo; Ctrl+C encerra.
+
+`proxy.conf.json` remove os mesmos prefixos que Nginx:
+
+| Prefixo | Backend no host | Backend no Docker |
+| --- | --- | --- |
+| /api/order | localhost:5074 | order-service:8080 |
+| /api/inventory | localhost:5276 | inventory-service:8080 |
+| /api/audit | localhost:5288 | audit-worker:8080 |
+| /api/pricefeed | localhost:5080 | pricefeed-service:8080 |
+| /api/pricing | localhost:5090 | pricing-service:8080 |
+
+O Nginx desabilita buffering no proxy PriceFeed para entregar SSE. A SPA usa fallback para index.html. Configuracao de APIs e ferramentas fica em `src/environments/environment*.ts`, sem CORS ou gateway novo.
+
+Estrutura basica em `src/frontend/MicroservicesLab.App`:
+- `src/app/core/api`: HttpClient, contratos tipados, health e SSE.
+- `src/app/pages`: dashboard, products, orders, prices, audit, observability.
+- `src/app/app.routes.ts`: componentes standalone e rotas.
+- `src/environments`, `proxy.conf.json`, `nginx.conf`: configuracao por modo de execucao.
+
+## Execucao manual dos backends (alternativa)
+
+Nao execute o servico local e seu equivalente Docker na mesma porta ou no mesmo consumer group para validar o fluxo. Confira o ambiente e as connection strings antes de trocar de modo. PostgreSQL/Kafka existentes podem ser reutilizados; instrucoes detalhadas: [PostgreSQL](POSTGRESQL.md), [Kafka](KAFKA.md).
+
+Com dependencias ativas, executar cada comando abaixo em **terminal separado na raiz**. Migrations locais sao necessarias somente se ainda nao aplicadas; o Compose ja as aplica.
+
+Inventory precisa do perfil HTTPS para a chamada gRPC local. Confie no certificado de desenvolvimento quando necessario:
 
 ```powershell
-docker compose up -d --build order-service
-```
-
-Limpar dados locais intencionalmente:
-
-```powershell
-docker compose down -v
-```
-
-`docker compose down` para os containers, mas preserva os volumes nomeados. `docker compose down -v` remove os volumes `postgres_data` e `kafka_data`, apagando bancos, mensagens e offsets locais.
-
-## Execucao com Kubernetes
-
-O Docker Compose continua sendo o modo mais simples para rodar localmente. Kubernetes esta disponivel para estudar Pods, Deployments, Services, ConfigMaps, Secrets, probes, replicas, self-healing e rolling update.
-
-Buildar imagens locais:
-
-```powershell
-docker compose build inventory-service order-service payment-service audit-worker
-```
-
-Aplicar manifests:
-
-```powershell
-kubectl apply -k k8s
-```
-
-Verificar:
-
-```powershell
-kubectl get pods -n microservices-lab
-kubectl get services -n microservices-lab
-```
-
-Acessar APIs:
-
-```powershell
-kubectl port-forward service/order-service 15074:8080 -n microservices-lab
-kubectl port-forward service/inventory-service 15276:8080 -n microservices-lab
-```
-
-Remover o ambiente Kubernetes:
-
-```powershell
-kubectl delete namespace microservices-lab
-```
-
-Resumo do ambiente Docker Compose:
-
-| Componente | Tecnologia | Porta/endpoint | Dependencia |
-| --- | --- | --- | --- |
-| PostgreSQL | PostgreSQL | `localhost:5432` | - |
-| Kafka | Kafka `apache/kafka:3.9.0` | host `localhost:9092`; containers `kafka:29092` | - |
-| Inventory.Service | .NET 9 | HTTP `http://localhost:5276`; gRPC `http://inventory-service:8081` no Docker; host `localhost:7242` mapeado para inspecao | PostgreSQL |
-| Payment.Service | Go | sem HTTP | Kafka |
-| Order.Service | .NET 9 | HTTP `http://localhost:5074` | PostgreSQL, Inventory.Service gRPC, Kafka |
-| Audit.Worker | .NET 9 Worker | sem HTTP | Kafka, PostgreSQL |
-| OpenTelemetry Collector | OTel Collector | OTLP gRPC `localhost:4317`, OTLP HTTP `localhost:4318`, Prometheus exporter `localhost:9464` | - |
-| Jaeger | Jaeger all-in-one | `http://localhost:16686` | OpenTelemetry Collector |
-| Prometheus | Prometheus | `http://localhost:9090` | OpenTelemetry Collector |
-| Grafana | Grafana | `http://localhost:3000` | Prometheus |
-
-### Verificar se o ambiente esta funcionando
-
-```powershell
-# Containers ativos de infraestrutura.
-docker compose ps
-
-# Kafka saudavel e topicos ativos.
-docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:29092 --list
-
-# PostgreSQL e bancos usados pelos servicos.
-Test-NetConnection localhost -Port 5432
-docker compose exec postgres psql -U postgres -d postgres -c "SELECT datname FROM pg_database WHERE datname IN ('order_db','inventory_db','audit_db') ORDER BY datname;"
-
-# Portas HTTP dos servicos.
-Test-NetConnection localhost -Port 5276
-Test-NetConnection localhost -Port 5074
-
-# Health dos servicos HTTP. Se algum comando falhar, confirme se o terminal do servico correspondente esta rodando.
-Invoke-RestMethod http://localhost:5276/health/ready
-Invoke-RestMethod http://localhost:5074/health/ready
-
-# Servicos sem endpoint HTTP.
-docker compose ps payment-service audit-worker
-docker compose logs --tail=40 payment-service audit-worker
-```
-
-## Execucao manual
-
-A execucao manual continua disponivel como alternativa didatica e para debug fino dos servicos. Use as secoes detalhadas abaixo quando quiser estudar cada componente separadamente.
-
-### Ordem rapida manual
-
-Terminal 1 - Infraestrutura:
-
-```powershell
-# PostgreSQL usado nas validacoes manuais anteriores.
-docker start microserviceslab-postgres
-docker ps --filter "name=microserviceslab-postgres"
-Test-NetConnection localhost -Port 5432
-
-# Kafka isolado da FASE 4.1.
-docker compose -f .\infra\kafka\docker-compose.kafka.yml up -d
-powershell -ExecutionPolicy Bypass -File .\infra\kafka\create-topics.ps1
-```
-
-Terminal 2 - Inventory.Service:
-
-```powershell
+dotnet dev-certs https --trust
 dotnet run --project .\src\services\Inventory.Service\Inventory.Service.csproj --launch-profile https
 ```
 
-Terminal 3 - Payment.Service:
-
-```powershell
-cd .\src\services\Payment.Service
-go run .\cmd\payment-service
-```
-
-Se estiver usando Git Bash, use barras `/`:
-
-```bash
-cd ./src/services/Payment.Service
-go run ./cmd/payment-service
-```
-
-Se o terminal ja estiver em `src/services/Payment.Service`, execute apenas:
-
-```bash
-go run ./cmd/payment-service
-```
-
-Terminal 4 - Order.Service:
+Order usa `https://localhost:7242` em appsettings local:
 
 ```powershell
 dotnet run --project .\src\services\Order.Service\Order.Service.csproj --launch-profile http
 ```
 
-Terminal 5 - Audit.Worker:
+Audit API em 5288 (sem depender de porta implicita):
 
 ```powershell
+$env:ASPNETCORE_URLS = 'http://localhost:5288'
 dotnet run --project .\src\workers\Audit.Worker\Audit.Worker.csproj
 ```
 
-## Ambiente Atual
-
-```text
-Cliente
-  |
-  v
-Order.Service (.NET)
-  |
-  +--- gRPC ---> Inventory.Service (.NET)
-  |                  |
-  |                  v
-  |             inventory_db
-  |
-  +--- order_db
-  |
-  +--- OrderCreated ---> Kafka
-                         |
-                         v
-                  Payment.Service (Go)
-                         |
-             +-----------+-----------+
-             |                       |
-             v                       v
-      PaymentApproved          PaymentRejected
-             |                       |
-             +-----------+-----------+
-                         |
-                         v
-                  Order.Service
-                         |
-                         v
-                  Audit.Worker
-                         |
-                         v
-                     audit_db
-```
-
-## Ordem Recomendada
-
-1. PostgreSQL.
-2. Kafka.
-3. `Inventory.Service`.
-4. `Payment.Service`.
-5. `Audit.Worker`.
-6. `Order.Service`.
-
-`Order.Service` pode subir antes dos consumidores, mas para observar o fluxo completo em tempo real e mais facil deixar `Payment.Service` e `Audit.Worker` rodando antes de criar pedidos.
-
-## Portas
-
-```text
-PostgreSQL: 5432
-Kafka: 9092
-Inventory.Service HTTP: 5276
-Inventory.Service HTTPS/gRPC: 7242
-Order.Service HTTP: 5074
-Order.Service HTTPS: 7213
-Audit.Worker: sem porta HTTP
-Jaeger: 16686
-Prometheus: 9090
-Grafana: 3000
-OTLP gRPC: 4317
-OTLP HTTP: 4318
-Collector metrics: 9464
-```
-
-## Bancos
-
-```text
-Order.Service     -> order_db
-Inventory.Service -> inventory_db
-Audit.Worker      -> audit_db
-```
-
-## Topicos Kafka
-
-```text
-order-created
-payment-approved
-payment-rejected
-```
-
-## 1. PostgreSQL
-
-Verificar acesso:
+Payment, sem servidor HTTP:
 
 ```powershell
-Test-NetConnection localhost -Port 5432
-```
-
-Listar bancos do laboratorio:
-
-```powershell
-docker exec microserviceslab-postgres psql -U postgres -d postgres -c "SELECT datname FROM pg_database WHERE datname IN ('order_db','inventory_db','audit_db') ORDER BY datname;"
-```
-
-Aplicar migrations, se necessario:
-
-```powershell
-dotnet ef database update --project .\src\services\Order.Service\Order.Service.csproj --startup-project .\src\services\Order.Service\Order.Service.csproj
-dotnet ef database update --project .\src\services\Inventory.Service\Inventory.Service.csproj --startup-project .\src\services\Inventory.Service\Inventory.Service.csproj
-dotnet ef database update --project .\src\workers\Audit.Worker\Audit.Worker.csproj --startup-project .\src\workers\Audit.Worker\Audit.Worker.csproj
-```
-
-## 2. Kafka
-
-Subir Kafka:
-
-```powershell
-docker compose -f .\infra\kafka\docker-compose.kafka.yml up -d
-```
-
-Criar topicos:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\infra\kafka\create-topics.ps1
-```
-
-Verificar:
-
-```powershell
-docker inspect kafka --format "{{json .State.Health}}"
-docker exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
-```
-
-## 3. Inventory.Service
-
-Terminal 1:
-
-```powershell
-dotnet run --project .\src\services\Inventory.Service\Inventory.Service.csproj --launch-profile https
-```
-
-Health:
-
-```powershell
-Invoke-RestMethod http://localhost:5276/health/ready
-```
-
-Listar produtos:
-
-```powershell
-Invoke-RestMethod http://localhost:5276/products | ConvertTo-Json -Depth 10
-```
-
-Criar produto:
-
-```powershell
-$body = @{ name = "Produto Local"; price = 100.00; availableQuantity = 10 } | ConvertTo-Json
-Invoke-RestMethod -Method Post -Uri http://localhost:5276/products -ContentType "application/json" -Body $body
-```
-
-## 4. Payment.Service
-
-Terminal 2:
-
-```powershell
-cd .\src\services\Payment.Service
-go run .\cmd\payment-service
-```
-
-No Git Bash, a partir da raiz do repositorio:
-
-```bash
-cd ./src/services/Payment.Service
+Set-Location .\src\services\Payment.Service
 go run ./cmd/payment-service
 ```
 
-No Git Bash, se ja estiver em `src/services/Payment.Service`:
+Git Bash usa barras normais: `cd ./src/services/Payment.Service`, `go run ./cmd/payment-service`. Nao use caminhos PowerShell com barras invertidas no Bash.
 
-```bash
-go run ./cmd/payment-service
-```
-
-Variaveis opcionais:
+PriceFeed local ajustado para nao conflitar com Prometheus em 9090 e para combinar com o proxy Angular:
 
 ```powershell
-$env:KAFKA_GROUP_ID = "payment-service"
-$env:PAYMENT_MAX_AUTO_APPROVAL_AMOUNT = "10000"
+Set-Location .\src\services\PriceFeed.Service
+$env:PRICE_HTTP_ADDR = ':5080'
+$env:PRICE_GRPC_ADDR = ':19090'
+$env:PRICE_KAFKA_ENABLED = 'true'
+$env:PRICE_KAFKA_BOOTSTRAP_SERVERS = 'localhost:9092'
+$env:PRICE_UPDATE_INTERVAL = '500ms'
+go run .
 ```
 
-## 5. Audit.Worker
+Use Ctrl+C para cancelamento dos contextos e encerramento. Para estudar somente SSE/console, `PRICE_KAFKA_ENABLED=false`; isso nao alimenta o snapshot Pricing. Simbolos/precos iniciais e labs: [Kafka PriceUpdated](../labs/LAB-15-kafka-price-updated.md).
 
-Terminal 3:
+Pricing REST local na porta esperada pelo proxy:
 
 ```powershell
-dotnet run --project .\src\workers\Audit.Worker\Audit.Worker.csproj
+$env:ASPNETCORE_URLS = 'http://localhost:5090'
+dotnet run --project .\src\services\Pricing.Service\Pricing.Service.csproj --no-launch-profile
 ```
 
-## 6. Order.Service
+O modo gRPC direto e opcional e nao alimenta o snapshot REST: [mini-lab](../labs/LAB-RT-GRPC-SERVER-STREAMING.md).
 
-Terminal 4:
+## Testes e estudos
 
-```powershell
-dotnet run --project .\src\services\Order.Service\Order.Service.csproj --launch-profile http
-```
+Comandos unitarios/build: [README](../../README.md#testes).
+Integracao e falhas opcionais: [INTEGRATION_TESTS](../INTEGRATION_TESTS.md). Nao repetir as falhas controladas automaticamente em revisoes de documentacao.
 
-Health:
-
-```powershell
-Invoke-RestMethod http://localhost:5074/health/ready
-```
-
-## Criar Pedido
-
-Use um `ProductId` existente do `Inventory.Service`:
-
-```powershell
-$body = @{ productId = "<PRODUCT_ID>"; quantity = 1 } | ConvertTo-Json
-$order = Invoke-RestMethod -Method Post -Uri http://localhost:5074/orders -ContentType "application/json" -Body $body
-$order | ConvertTo-Json -Depth 10
-```
-
-Consultar depois:
-
-```powershell
-Invoke-RestMethod "http://localhost:5074/orders/$($order.id)" | ConvertTo-Json -Depth 10
-```
-
-Consultar no banco:
-
-```powershell
-docker exec microserviceslab-postgres psql -U postgres -d order_db -c "SELECT id, product_id, quantity, unit_price, total_price, status, created_at FROM orders ORDER BY created_at DESC LIMIT 5;"
-```
-
-Consultar auditoria:
-
-```powershell
-docker exec microserviceslab-postgres psql -U postgres -d audit_db -c "SELECT event_id, event_type, topic, message_key, kafka_partition, kafka_offset FROM audit_events ORDER BY audited_at DESC LIMIT 10;"
-```
-
-## Observar Eventos Kafka
-
-Em terminais separados:
-
-```powershell
-docker exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic order-created --property print.key=true --property key.separator=" | "
-docker exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic payment-approved --property print.key=true --property key.separator=" | "
-docker exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic payment-rejected --property print.key=true --property key.separator=" | "
-```
-
-Para ler tambem mensagens antigas, adicione `--from-beginning`.
-
-## Validar Codigo
-
-Da raiz do repositorio:
-
-```powershell
-dotnet build .\MicroservicesLab.sln
-dotnet test .\MicroservicesLab.sln --no-build
-```
-
-Modulo Go:
-
-```powershell
-cd .\src\services\Payment.Service
-go test ./...
-go build .\cmd\payment-service
-Remove-Item -LiteralPath .\payment-service.exe -ErrorAction SilentlyContinue
-```
+Ferramentas: [Observabilidade](OBSERVABILITY.md) (Grafana 3000, Prometheus 9090, Jaeger 16686).
+Kubernetes preserva o laboratorio da Parte I, nao uma implantacao completa da Parte III: [guia Kubernetes](KUBERNETES.md).
+Outros procedimentos: [Referencia rapida](QUICK-REFERENCE.md), [Troubleshooting](TROUBLESHOOTING.md), [Indice dos labs](../labs/README.md).

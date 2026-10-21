@@ -54,6 +54,7 @@ services:
       - /bin/sh
       - -c
       - |
+        set -e
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic order-created --partitions 3 --replication-factor 1
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic payment-approved --partitions 3 --replication-factor 1
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic payment-rejected --partitions 3 --replication-factor 1
@@ -202,12 +203,31 @@ services:
       timeout: 5s
       retries: 12
 
+  frontend:
+    build:
+      context: .
+      dockerfile: src/frontend/MicroservicesLab.App/Dockerfile
+    ports:
+      - "4200:80"
+    depends_on:
+      order-service:
+        condition: service_healthy
+      inventory-service:
+        condition: service_healthy
+      pricefeed-service:
+        condition: service_started
+      pricing-service:
+        condition: service_healthy
+      audit-worker:
+        condition: service_started
+
   audit-worker:
     build:
       context: .
       dockerfile: src/workers/Audit.Worker/Dockerfile
     environment:
       DOTNET_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc
       ConnectionStrings__AuditDb: Host=postgres;Port=5432;Database=audit_db;Username=postgres;Password=postgres
@@ -217,6 +237,8 @@ services:
       Kafka__Topics__0: order-created
       Kafka__Topics__1: payment-approved
       Kafka__Topics__2: payment-rejected
+    ports:
+      - "5288:8080"
     depends_on:
       otel-collector:
         condition: service_started

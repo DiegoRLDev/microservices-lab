@@ -1,0 +1,204 @@
+<section class="orders-page">
+  <header class="page-header">
+    <div>
+      <span>Fase 26</span>
+      <h1>Pedidos e pagamentos</h1>
+      <p>
+        Criacao de pedidos e acompanhamento do pagamento assincrono processado
+        via Kafka pelo Payment.Service.
+      </p>
+    </div>
+
+    <button type="button" class="primary-action" (click)="loadOrders()" [disabled]="ordersStatus() === 'loading'">
+      {{ ordersStatus() === 'loading' ? 'Atualizando...' : 'Atualizar pedidos' }}
+    </button>
+  </header>
+
+  <div class="content-grid">
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <h2>Criar pedido</h2>
+          <p>Selecione um produto existente e informe a quantidade desejada.</p>
+        </div>
+      </div>
+
+      @if (productsStatus() === 'loading') {
+        <p class="state-message">Carregando produtos...</p>
+      } @else if (productsStatus() === 'error') {
+        <p class="feedback error">{{ productsError() }}</p>
+      }
+
+      <form class="order-form" [formGroup]="orderForm" (ngSubmit)="createOrder()">
+        <label>
+          Produto
+          <select formControlName="productId" [disabled]="productsStatus() === 'loading' || products().length === 0">
+            <option value="">Selecione um produto</option>
+            @for (product of products(); track product.id) {
+              <option [value]="product.id">
+                {{ product.name }} - estoque {{ product.availableQuantity }}
+              </option>
+            }
+          </select>
+          @if (orderFieldHasError('productId')) {
+            <small>Produto e obrigatorio.</small>
+          }
+        </label>
+
+        <label>
+          Quantidade
+          <input type="number" formControlName="quantity" min="1" step="1">
+          @if (orderFieldHasError('quantity')) {
+            <small>Informe uma quantidade maior que zero.</small>
+          }
+        </label>
+
+        <p class="hint">
+          A criacao do pedido consulta disponibilidade, mas nao reserva estoque automaticamente.
+        </p>
+
+        @if (createMessage()) {
+          <p class="feedback success">{{ createMessage() }}</p>
+        }
+
+        @if (createError()) {
+          <p class="feedback error">{{ createError() }}</p>
+        }
+
+        <button type="submit" class="primary-action" [disabled]="createStatus() === 'loading' || products().length === 0">
+          {{ createStatus() === 'loading' ? 'Criando...' : 'Criar pedido' }}
+        </button>
+      </form>
+    </section>
+
+    <section class="panel details-panel">
+      <div class="section-heading">
+        <div>
+          <h2>Detalhes do pedido</h2>
+          <p>Acompanhe o status atual retornado pelo Order.Service.</p>
+        </div>
+      </div>
+
+      @if (detailsStatus() === 'loading') {
+        <p class="state-message">Carregando pedido...</p>
+      } @else if (detailsStatus() === 'error') {
+        <p class="feedback error">{{ detailsError() }}</p>
+      } @else if (selectedOrder()) {
+        <div class="order-details">
+          <div class="details-header">
+            <span [class]="statusClass(selectedOrder()!.status)">
+              {{ statusLabel(selectedOrder()!.status) }}
+            </span>
+
+            @if (isPolling()) {
+              <span class="polling-indicator">Atualizando</span>
+            }
+          </div>
+
+          <dl>
+            <div>
+              <dt>Identificador</dt>
+              <dd>{{ selectedOrder()?.id }}</dd>
+            </div>
+            <div>
+              <dt>Produto</dt>
+              <dd>{{ productName(selectedOrder()!.productId) }}</dd>
+            </div>
+            <div>
+              <dt>Produto ID</dt>
+              <dd>{{ selectedOrder()?.productId }}</dd>
+            </div>
+            <div>
+              <dt>Quantidade</dt>
+              <dd>{{ selectedOrder()?.quantity }}</dd>
+            </div>
+            <div>
+              <dt>Preco unitario</dt>
+              <dd>{{ selectedOrder()?.unitPrice | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</dd>
+            </div>
+            <div>
+              <dt>Total</dt>
+              <dd>{{ selectedOrder()?.totalPrice | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</dd>
+            </div>
+            <div>
+              <dt>Criado em</dt>
+              <dd>{{ selectedOrder()?.createdAt | date:'short':'':'pt-BR' }}</dd>
+            </div>
+          </dl>
+
+          @if (pollingMessage()) {
+            <p class="feedback neutral">{{ pollingMessage() }}</p>
+          }
+
+          @if (pollingError()) {
+            <p class="feedback error">{{ pollingError() }}</p>
+          }
+
+          <button type="button" class="secondary-action" (click)="refreshSelectedOrder()" [disabled]="detailsStatus() === 'loading'">
+            Atualizar pedido
+          </button>
+        </div>
+      } @else {
+        <p class="state-message">Nenhum pedido selecionado.</p>
+      }
+    </section>
+  </div>
+
+  <section class="panel orders-panel">
+    <div class="section-heading">
+      <div>
+        <h2>Pedidos cadastrados</h2>
+        <p>Dados reais retornados pelo Order.Service.</p>
+      </div>
+      <span>{{ orders().length }} item(ns)</span>
+    </div>
+
+    @if (ordersStatus() === 'loading') {
+      <p class="state-message">Carregando pedidos...</p>
+    } @else if (ordersStatus() === 'error') {
+      <p class="feedback error">{{ ordersError() }}</p>
+    } @else if (!hasOrders()) {
+      <p class="state-message">Nenhum pedido cadastrado.</p>
+    } @else {
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Pedidos cadastrados">
+        <table>
+          <thead>
+            <tr>
+              <th>Identificador</th>
+              <th>Produto</th>
+              <th>Quantidade</th>
+              <th>Total</th>
+              <th>Status</th>
+              <th>Criado em</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (order of orders(); track order.id) {
+              <tr [class.selected]="selectedOrder()?.id === order.id">
+                <td class="mono">{{ order.id }}</td>
+                <td>
+                  <strong>{{ productName(order.productId) }}</strong>
+                  <span>{{ order.productId }}</span>
+                </td>
+                <td>{{ order.quantity }}</td>
+                <td>{{ order.totalPrice | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+                <td>
+                  <span [class]="statusClass(order.status)">
+                    {{ statusLabel(order.status) }}
+                  </span>
+                </td>
+                <td>{{ order.createdAt | date:'short':'':'pt-BR' }}</td>
+                <td>
+                  <button type="button" class="link-action" (click)="selectOrder(order.id)">
+                    Detalhes
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</section>

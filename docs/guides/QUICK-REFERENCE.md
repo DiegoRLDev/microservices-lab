@@ -6,13 +6,32 @@ Comandos curtos para consulta rapida no MicroservicesLab.
 
 ```powershell
 docker compose up -d --build
-docker compose ps
+docker compose ps --all
 docker compose logs --tail=100 order-service
 docker compose logs -f payment-service
 docker compose down
-docker compose down -v
 docker compose config --quiet
 ```
+
+kafka-init Exited (0) e esperado. Nao use down -v/prune para troubleshooting: removem dados persistidos. Guia completo: [execucao local](RUNNING-LOCALLY.md).
+
+## Angular e APIs
+
+Angular: http://localhost:4200. APIs no host: Order 5074, Inventory 5276, Audit 5288, PriceFeed 5080, Pricing 5090. Payment nao possui HTTP.
+
+```powershell
+Push-Location .\src\frontend\MicroservicesLab.App
+pnpm install --frozen-lockfile
+pnpm test:ci
+pnpm build
+Pop-Location
+Invoke-RestMethod http://localhost:4200/api/audit/health
+Invoke-RestMethod 'http://localhost:4200/api/audit/audit-events?limit=5'
+Invoke-RestMethod http://localhost:4200/api/pricing/prices
+curl.exe -N --max-time 3 http://localhost:4200/api/pricefeed/prices/stream
+```
+
+O stream termina por timeout intencional (curl exit 28). Desenvolvimento usa proxy.conf.json; use porta 4201 se frontend Docker ocupar 4200. Testes integrados opcionais: [procedimentos e cuidados](../INTEGRATION_TESTS.md).
 
 ## .NET
 
@@ -32,6 +51,16 @@ go test ./...
 go run .\cmd\payment-service
 cd ..\..\..
 ```
+
+PriceFeed, a partir da raiz:
+
+```powershell
+Push-Location .\src\services\PriceFeed.Service
+go test ./...
+Pop-Location
+```
+
+Para executar localmente sem conflito com Prometheus em 9090, configure PRICE_HTTP_ADDR=:5080 e PRICE_GRPC_ADDR=:19090. Nao execute a copia local junto com a copia Docker: [guia local](RUNNING-LOCALLY.md).
 
 ## PostgreSQL
 

@@ -1,0 +1,138 @@
+<section class="observability-page">
+  <header class="page-header">
+    <div>
+      <span>Fase 28.2</span>
+      <h1>Observabilidade do laboratorio</h1>
+      <p>
+        Saude dos servicos com endpoints reais, atalhos para as ferramentas do
+        ambiente local e uma leitura simplificada dos fluxos principais.
+      </p>
+    </div>
+
+    <button type="button" (click)="refresh()" [disabled]="isRefreshing()">
+      {{ isRefreshing() ? 'Verificando...' : 'Atualizar' }}
+    </button>
+  </header>
+
+  <div class="summary-grid" aria-label="Resumo de observabilidade">
+    <article class="summary-card">
+      <span>Servicos monitorados</span>
+      <strong>{{ monitoredCount() }}</strong>
+      <p>Possuem endpoint HTTP de health acessivel pelo front-end.</p>
+    </article>
+
+    <article class="summary-card">
+      <span>Saudaveis agora</span>
+      <strong>{{ healthyCount() }}</strong>
+      <p>Resultado da ultima verificacao executada nesta tela.</p>
+    </article>
+
+    <article class="summary-card">
+      <span>Nao monitorados</span>
+      <strong>{{ unmonitoredCount() }}</strong>
+      <p>Servicos sem health HTTP exposto no Compose atual.</p>
+    </article>
+  </div>
+
+  <section class="panel">
+    <div class="section-heading">
+      <div>
+        <span>Health checks</span>
+        <h2>Saude dos servicos</h2>
+        <p>
+          A tela diferencia falha de comunicacao de ausencia real de endpoint de
+          monitoramento.
+        </p>
+      </div>
+
+      @if (lastRefreshAt()) {
+        <small>Atualizado em {{ lastRefreshAt() | date:'HH:mm:ss' }}</small>
+      }
+    </div>
+
+    <div class="service-grid">
+      @for (service of services(); track service.target.name) {
+        <article
+          class="service-card"
+          [class.healthy]="service.status === 'healthy'"
+          [class.unavailable]="service.status === 'unavailable'"
+          [class.checking]="service.status === 'checking'"
+          [class.unmonitored]="service.status === 'unmonitored'"
+        >
+          <div class="service-card-header">
+            <div>
+              <h3>{{ service.target.name }}</h3>
+              <p>{{ service.target.technology }}</p>
+            </div>
+
+            <span class="status-pill">{{ statusLabel(service.status) }}</span>
+          </div>
+
+          <p>{{ service.target.responsibility }}</p>
+
+          <div class="health-detail">
+            <span>{{ service.detail }}</span>
+
+            @if (service.target.healthUrl) {
+              <code>{{ service.target.healthUrl }}</code>
+            } @else {
+              <code>health HTTP nao exposto</code>
+            }
+
+            @if (service.lastCheckedAt) {
+              <small>Ultima verificacao: {{ service.lastCheckedAt | date:'HH:mm:ss' }}</small>
+            }
+          </div>
+        </article>
+      }
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="section-heading">
+      <div>
+        <span>Ferramentas</span>
+        <h2>Acessos operacionais</h2>
+        <p>Links usam as portas publicadas no host pelo Docker Compose.</p>
+      </div>
+    </div>
+
+    <div class="tools-grid">
+      @for (tool of tools; track tool.name) {
+        <a class="tool-card" [href]="tool.url" target="_blank" rel="noreferrer">
+          <span>{{ tool.name }}</span>
+          <strong>{{ tool.url }}</strong>
+          <p>{{ tool.description }}</p>
+        </a>
+      }
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="section-heading">
+      <div>
+        <span>Arquitetura</span>
+        <h2>Fluxos principais</h2>
+        <p>
+          Visao estatica baseada na configuracao atual. Nao representa telemetria
+          em tempo real.
+        </p>
+      </div>
+    </div>
+
+    <div class="flow-grid">
+      @for (flow of flows; track flow.title) {
+        <article class="flow-card">
+          <h3>{{ flow.title }}</h3>
+          <p>{{ flow.description }}</p>
+
+          <ol>
+            @for (step of flow.steps; track step) {
+              <li>{{ step }}</li>
+            }
+          </ol>
+        </article>
+      }
+    </div>
+  </section>
+</section>

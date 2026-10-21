@@ -1,9 +1,11 @@
 # Progresso
 
-O laboratorio esta organizado em duas partes:
+O laboratorio esta organizado em quatro partes:
 
 - Parte I - Microservices Fundamentals: Fases 0-12.
 - Parte II - Realtime Distributed Systems: Fases 13-22, iniciada na FASE 13 depois do fechamento da Parte I.
+- Parte III - Aplicacao Angular: Fases 23-30 concluidas; Fase 31 implementada e testada, com verificacao visual pendente.
+- Parte IV - Consistencia distribuida: Fase 32 planejada; diagnostico da antiga Fase 31 preservado, sem implementacao.
 
 ## Parte I - Microservices Fundamentals
 
@@ -39,6 +41,202 @@ O laboratorio esta organizado em duas partes:
 | 20 | Ingester/Processor | Pendente |
 | 21 | Realtime observability | Pendente |
 | 22 | Load e chaos testing | Pendente |
+
+## Parte III - Aplicacao Angular
+
+| Fase | Descricao | Status |
+| ---- | --------- | ------ |
+| 23 | Angular, estrutura inicial e Docker Compose | Concluido |
+| 24 | Dashboard e navegacao | Concluido |
+| 25 | Produtos e estoque | Concluido |
+| 26 | Pedidos e pagamentos | Concluido |
+| 27 | Precos realtime (SSE) | Concluido |
+| 28 | Auditoria e observabilidade | Concluido |
+| 29.1 | Testes automatizados Angular | Concluido |
+| 29.2 | Testes integrados e cenarios de falha | Concluido |
+| 29.3 | Revisao tecnica e documentacao | Concluido |
+| 30 | Responsividade e ajustes visuais Angular | Concluido |
+| 31 | Temas e personalizacao visual | Concluido (validacao visual pendente) |
+
+## Parte IV - Consistencia distribuida
+
+| Fase | Descricao | Status |
+| ---- | --------- | ------ |
+| 32 | Consistencia entre pedidos e estoque | Pendente |
+
+## Reorganizacao do roadmap
+
+Fases 23-30 consolidadas como concluidas por confirmacao do usuario. A antiga Fase 31 realizou apenas diagnostico e alterou somente ROADMAP/PROGRESS; nao implementou codigo de aplicacao. As alteracoes documentais locais preexistentes foram preservadas e reorganizadas, sem descarte ou reversao. O historico recente identifica as alteracoes Angular da Fase 30 no commit 58c5e74, anterior a analise de consistencia.
+
+Nesta reorganizacao foram alterados somente estes dois documentos. Nenhuma funcionalidade, contrato, migration ou teste de aplicacao foi implementado/executado. Sem git add, commit, push ou troca de branch; novas Fases 31 e 32 nao iniciadas.
+
+## FASE 31 - Temas e personalizacao visual
+
+Status: Implementacao e testes concluidos em 20/10/2026; verificacao visual pendente. Branch feature/part-3, arvore inicialmente limpa.
+
+- Temas claro (paleta anterior preservada), escuro e automatico via prefers-color-scheme; tokens CSS compartilhados pelas seis paginas, incluindo campos, payload, sombras e estados semanticos.
+- Painel Aparencia recolhivel na navegacao, acessivel em desktop/mobile, com radios nativos, swatches nomeados/aria-pressed, seletor de cor e campo hexadecimal validado. Sem biblioteca adicional ou alteracao do layout das paginas.
+- Nove cores predefinidas: verde padrao, azul, roxo, laranja, vermelho, ciano, amarelo (#EAB308), rosa (#EC4899) e grafite (#374151). As seis anteriores foram preservadas. Destaque aplicado em acoes, links, foco, selecao e highlight de precos; sucesso/erro/alerta e estados operacionais conservam cores proprias, adaptadas ao tema.
+- localStorage na chave microserviceslab.appearance, com normalizacao e fallback para automatico/verde diante de dados invalidos. Falha de acesso/persistencia nao impede alteracoes na sessao.
+- public/theme.js e carregado sincronamente no head antes do Angular e das folhas de estilo. O ThemeService reutiliza suas funcoes, sem duplicar o algoritmo de paleta; atualiza preferencias por signals e remove o listener de sistema ao ser destruido.
+- Cor escolhida preservada no preenchimento. Texto de botao preto/branco pelo maior contraste; variante de links/foco ajustada ate 4.5:1 contra fundo, superficie e destaque suave. Botoes preenchidos recebem contorno interno para cores extremas. Isso nao equivale a uma auditoria WCAG completa.
+
+Validacao:
+
+- pnpm test:ci: 52/52 aprovados (45 da implementacao inicial e 7 deste complemento), incluindo template real, modo automatico, persistencia/restauracao, armazenamento indisponivel, dados invalidos, cores personalizadas, contraste e limpeza do listener.
+- Complemento das cores: 18/18 testes direcionados do ThemeService aprovados; selecao por swatch e persistencia das tres novas cores verificadas em testes do template real. A verificacao de contraste inclui os nove presets em claro/escuro; o grafite conserva o valor escolhido e recebe variante mais clara de texto/foco no escuro pelo algoritmo existente. Seletor personalizado e paleta semantica inalterados.
+- pnpm build: aprovado, sem erro de compilacao ou estouro de budget.
+- Servidor Angular isolado em http://127.0.0.1:4202; pagina, theme.js, main.js e styles.css respondem HTTP 200. Servicos Docker existentes nao foram reiniciados nem reconstruidos.
+- Verificacao visual real claro/escuro em desktop/mobile NAO concluida: a ferramenta de navegador apresentou timeouts ao recarregar a aba e ao abrir a nova instancia, apesar dos assets acessiveis. Nao afirmar ausencia de overflow nem validacao visual com base apenas em jsdom/build.
+- Pendente: abrir Aparencia, alternar claro/escuro/automatico e as nove cores nas seis paginas em desktop/mobile; testar branco/preto personalizados, seletor nativo, teclado e recarga. Alteracao real do tema do sistema e flash entre frames tambem nao foram observados visualmente; a restauracao pre-Angular e o listener estao cobertos por testes. Este complemento nao repetiu a tentativa de validacao visual; selecao/persistencia foram verificadas automaticamente.
+- Testes .NET/Go e integracao completa nao executados: backend, contratos, HTTP, polling, SSE, dependencias e Docker nao foram alterados.
+
+Arquivos: public/theme.js; core/theme.service.ts e seu spec; app.component.ts/html/css/spec; styles.css; index.html; test-setup.ts; CSS de Dashboard, Produtos, Pedidos, Precos, Auditoria e Observabilidade; ROADMAP e PROGRESS.
+
+Sem git add, commit, push ou troca de branch. Fase 32 nao iniciada; diagnostico de consistencia abaixo preservado.
+
+## FASE 32 - Diagnostico preservado de consistencia distribuida
+
+Status: Pendente; implementacao da nova Fase 32 nao iniciada. A analise abaixo foi realizada em 20/10/2026 sob a numeracao antiga (Fase 31) e interrompida antes de modificar codigo, conforme a condicao explicita daquele pedido. As decisoes de desenho concreto continuam pendentes; a reorganizacao apenas transfere o escopo e preserva o diagnostico.
+
+Escopo integral transferido para a Parte IV: reservas atomicas e identificadas, concorrencia, idempotencia, outbox minima, deduplicacao de pagamentos, compensacao, migrations e recuperacao de falhas. Nenhum desses itens foi implementado nesta reorganizacao.
+
+Inspecao limitada a Order, Inventory, Payment, contratos gRPC/Kafka e testes relevantes. AGENTS.md seguido; branch feature/part-3 e working tree inicialmente limpa.
+
+Evidencias no codigo atual:
+
+- Order/Services/OrdersAppService.cs: CreateAsync consulta CheckAvailability, salva o pedido e depois publica OrderCreated (SaveChangesAsync antes de PublishAsync). Nao ha registro duravel da publicacao pendente.
+- Inventory/Services/InventoryAppService.cs: ReserveStockAsync le o produto, chama Product.Reserve e salva. InventoryDbContext nao define token de concorrencia nem uma reserva identificada. Duas chamadas podem ler saldo 5, reservar 4 cada e gravar saldo 1: saldo nao negativo nao significa que as 8 unidades aceitas tenham sido contabilizadas corretamente. Este e um interleaving possivel por inspecao, nao um teste executado.
+- src/protos/inventory.proto: ReserveStockRequest possui somente product_id/quantity; faltam identidade da operacao e consulta/liberacao idempotente. IInventoryClient expoe somente CheckAvailabilityAsync.
+- Payment/internal/kafka/order_created_consumer.go: processa/publica antes de CommitMessages. Payment/internal/processing/payment_processor.go gera PaymentId e EventId de saida novos, sem decisao persistida; reentrega pode gerar outro resultado, inclusive diferente se a configuracao de aprovacao mudar entre tentativas.
+- Order/Services/PaymentEventsAppService.cs: atualiza somente o status, sem compensar estoque nem registrar eventos recebidos. Order ignora reaplicacao do mesmo status final, mas isso nao e deduplicacao duravel por evento/operacao; status conflitante lanca erro.
+- CreateOrderRequest possui productId/quantity; o POST atual nao recebe identidade estavel para distinguir retry do cliente de outra compra legitima com o mesmo corpo.
+
+Janelas relevantes (riscos ALTOS; nao provocados no ambiente):
+
+| Cenario | Por que uma correcao apenas local nao basta |
+| --- | --- |
+| Reserva concluida, resposta gRPC perdida | Retry sem chave pode baixar duas vezes. Mesmo com chave, precisa consultar/repetir a mesma operacao e retomar o fluxo |
+| Processo cai apos reservar e antes de salvar o pedido | Reserva pode ficar orfa; finally/catch nao executam apos queda. Exige intencao duravel anterior a chamada e recuperacao/reconciliacao |
+| Pedido salvo, publicacao Kafka falha | Pedido pode ficar sem pagamento e reserva retida; exige publicacao pendente recuperavel, atomica com o estado local |
+| Kafka aceitou a mensagem, mas confirmacao se perdeu | Liberar estoque no catch pode permitir pagamento de pedido com estoque devolvido. Resultado e indeterminado, nao falha de negocio confirmada |
+| Pagamento rejeitado e devolucao concluida antes de queda | Reentrega pode devolver duas vezes; transicao da reserva e incremento do saldo devem ser uma transacao local idempotente |
+| Status rejeitado salvo antes de devolver estoque | Reentrega pode ser ignorada por status ja final e nunca realizar a devolucao. Precisa registrar e recuperar compensacao pendente |
+| Pagamento publicado, commit do offset falha | Reentrega nao pode decidir/processar novamente como nova operacao. Persistir resultado e sua entrega, ou avaliar alternativa transacional Kafka, antes de alterar o consumer |
+
+Decisao requerida, sem implementacao automatica:
+
+1. Recomendada: autorizar um fluxo duravel minimo e consistencia eventual recuperavel. Registrar a intencao antes do gRPC; manter OrderId/operacao estavel; reservar com UPDATE condicional/lock e registro unico na mesma transacao; persistir pedido e publicacao pendente na mesma transacao local; recuperar operacoes/publicacoes apos queda; deduplicar resultado do pagamento; liberar reserva uma unica vez, com compensacao duravel e controle de transicoes terminais. Evitar frameworks, coordenador generico ou Saga/Outbox completos, mas reconhecer que registro de entrega duravel equivale ao nucleo de uma outbox.
+2. Alternativa de escopo reduzido: implementar apenas atomicidade/idempotencia da reserva no Inventory, sem integrar um fluxo distribuido com garantias incompletas. Nao atende a todos os criterios desta fase; exige aceite explicito do escopo menor.
+
+A opcao 1 exige migrations para registros duraveis/constraints, evolucao aditiva do gRPC e definicao da identidade de retries HTTP. Identidades iguais com productId/quantity diferentes devem ser rejeitadas. A decisao de persistencia/transacao do Payment precisa ser aprovada, pois hoje ele nao possui armazenamento proprio. Nao compartilhar tabelas entre servicos como atalho.
+
+O alvo seria atomicidade local e consistencia eventual com retomada, nao transacao atomica global nem disponibilidade garantida durante uma particao permanente. Dados/volumes precisam ser preservados e dependencias/processos de recuperacao precisam voltar a operar. Expirar ou devolver automaticamente por timeout, gerar IDs deterministas sem congelar o resultado, ou deduplicar apenas em memoria nao fecham as janelas acima.
+
+Validacao prevista para a implementacao, ainda NAO executada:
+
+- Concorrencia com conexoes/transacoes independentes no PostgreSQL real e saldo limitado; reservas aceitas + saldo final devem corresponder ao saldo inicial.
+- Mesma operacao simultanea/repetida, parametros divergentes, timeout apos commit e reinicio de processos.
+- Pagamento aprovado preserva baixa; rejeitado libera uma unica vez; duplicatas, falhas antes/depois de devolver e eventos conflitantes nao corrompem saldo.
+- Publicacao nao realizada, confirmacao Kafka perdida, falha antes/depois de commit de offsets e recuperacao de operacoes duraveis.
+- Testes direcionados .NET/Go e integracao isolada somente para essas fronteiras. Os testes atuais .NET usam EF InMemory e nao demonstram concorrencia/transacoes PostgreSQL; os testes Go do processor cobrem decisoes de aprovacao/rejeicao, nao deduplicacao recuperavel.
+
+Alteracoes da analise original (antiga Fase 31, agora incorporada ao planejamento da Fase 32): somente docs/ROADMAP.md e docs/PROGRESS.md. Nenhum codigo, contrato, migration, Angular, banco, volume ou servico em execucao alterado. Sem testes de aplicacao desnecessarios: apenas revisao documental e diff. Sem git add, commit ou push; nenhuma fase seguinte iniciada.
+
+## FASE 30 - Responsividade Angular
+
+Status: Concluido. Implementacao e validacoes realizadas em 20/10/2026; status consolidado na reorganizacao por confirmacao do usuario. Naquela reorganizacao, as novas Fases 31 (temas) e 32 (consistencia distribuida) ainda estavam pendentes.
+
+Diagnostico inicial:
+
+- Breakpoints de viewport nao consideravam a largura ocupada pela sidebar, deixando grids estreitos ou maiores que o conteudo disponivel.
+- Minimos intrinsecos de grid/flex permitiam que tabelas, textos e JSON ampliassem seus pais.
+- Navegacao mobile sempre expandida, sem controle de abertura/fechamento.
+- Campos, botoes, foco e regioes de scroll precisavam de tratamento compartilhado; botao Detalhes podia quebrar no meio da palavra.
+
+Implementado:
+
+- Grids auto-fit/minmax(min(100%, ...), 1fr), com largura minima zero nos filhos que precisam encolher. Padding adaptativo com clamp e variaveis CSS para titulos/paineis em telas pequenas.
+- Sidebar desktop preservada. Ate 820px, menu recolhivel em fluxo normal, sem overlay, com botao de 44px, aria-expanded/controls, rota atual acessivel, Escape e retorno de foco. Ao navegar, fecha e foca o conteudo principal; link de salto por teclado.
+- Formularios e grupos adaptativos; identificadores/textos longos quebram onde apropriado. Indicadores continuam usando texto alem de cor.
+- Tabelas preservadas, sem duplicar dados em cards: scroll somente no container, regiao nomeada/focavel e botoes Detalhes com largura minima e texto inteiro.
+- Payload JSON em pre com formatacao preservada, largura contida e scroll proprio acessivel por teclado.
+- Precos com valores tabulares e sem deslocamento vertical no highlight; reducao de movimento respeitada. EventSource/retry, polling de pedidos/health e HTTP permaneceram intactos.
+- Quatro testes novos usam o template real: abrir/fechar, Escape/foco, fechamento/foco apos navegacao e salto ao conteudo sem mudar de rota por causa do base href.
+
+Validacao no navegador:
+
+| Paginas | Larguras de viewport verificadas | Resultado |
+| --- | --- | --- |
+| Dashboard, Produtos, Pedidos, Precos, Auditoria, Observabilidade | 360, 390, 430, 768, 1024, 1280, 1920px | Medicoes de DOM sem overflow horizontal global; formularios/listas com APIs reais |
+
+- Validacao inicial via servidor Angular em localhost:4201 e verificacao posterior via Docker/Nginx em localhost:4200. Nao foi instalado Playwright/Cypress nem adicionada biblioteca CSS.
+- Screenshots de estados representativos em mobile/tablet/desktop; as medidas nas 42 combinacoes nao equivalem a auditoria visual completa de todos os estados possiveis.
+- Na rodada Docker, o bundle novo foi conferido e a pagina recarregada para evitar index.html antigo em cache. Se a interface antiga persistir apos rebuild, use Ctrl+F5. As 42 combinacoes passaram sem overflow global e com controles visiveis de pelo menos 44px.
+- Menu testado no navegador com mouse/Enter, Escape, fechamento apos escolher Produtos e foco no main. A navegacao permite as seis rotas sem scroll horizontal.
+- Detalhes reais de produto/pedido, validacao de formularios vazios e consulta de disponibilidade observados em mobile. Nenhum produto/pedido novo foi criado para esta fase; disponibilidade nao reserva estoque.
+- Auditoria: payload real de 477 caracteres preservado, com scroll interno (452px de conteudo em 307px disponiveis no teste mobile) e documento sem overflow. Filtro longo e sem resultados e limite invalido exibiram estados legiveis.
+- SSE com cinco simbolos reais e historico recebendo eventos; snapshot REST, auditoria e healths continuaram funcionando. Nao foram provocadas falhas de servicos para testar esta fase.
+
+Regressao:
+
+- pnpm test:ci: 30/30 aprovados (26 anteriores + 4 de navegacao/acessibilidade).
+- pnpm build: aprovado.
+- dotnet build MicroservicesLab.sln: aprovado, 0 warnings/erros; dotnet test --no-build: 32/32.
+- go test ./... em Payment.Service e PriceFeed.Service: aprovados.
+- docker compose config --quiet: aprovado. Frontend reconstruido e atualizado isoladamente com docker compose up -d --no-deps --build frontend; backends e volumes preservados.
+
+Arquivos principais:
+
+- src/styles.css; app.component.ts/html/css; novo app.component.spec.ts.
+- CSS das seis paginas; templates Produtos, Pedidos, Precos e Auditoria para regioes de scroll acessiveis.
+- README, ROADMAP e este PROGRESS. Nenhum cliente API, servico backend, manifesto Kubernetes ou arquivo de dependencias alterado.
+
+Checklist manual para complementar:
+
+1. Abrir localhost:4200 em celular/tablet real; abrir menu, percorrer seis rotas, testar Escape com teclado e observar foco.
+2. Preencher formularios com teclado virtual, mensagens de validacao e nomes extensos; conferir zoom e orientacao retrato/paisagem.
+3. Rolar tabelas horizontalmente e abrir detalhes; na auditoria, percorrer JSON longo sem mover horizontalmente a pagina.
+4. Manter Precos aberto para observar novos eventos e ler status de conexao; conferir healths, ferramentas e fluxos em Observabilidade.
+
+Limites: sem dispositivo fisico/Safari/iOS/Android, teclado virtual ou auditoria WCAG completa. Sem repetir cenarios invasivos de recuperacao. Dados atuais nao cobrem todos os tamanhos e estados; complementar com o checklist. Nao houve staging, commit ou push; branch feature/part-3 preservada.
+
+## FASE 29.3 - Revisao tecnica e consolidacao da documentacao
+
+Status: Concluido (20/10/2026).
+
+- Branch feature/part-3 confirmada; working tree limpa antes da revisao.
+- Revisados os seis servicos, contratos HTTP/gRPC/Kafka, Angular, Compose, proxies e testes.
+- Achados e recomendacoes: [relatorio tecnico](TECHNICAL_REVIEW.md).
+- Correcoes pequenas: timeout de health de 5s (com cancelamento), dependencia frontend -> Audit e fail-fast no shell de kafka-init.
+- README reduzido a ponto de entrada operacional. Arquitetura com diagramas dos fluxos reais e limites de instrumentacao/idempotencia.
+- Guia local atualizado: Audit HTTP 5288, PriceFeed/Pricing, cinco proxies, portas Go sem conflito com Prometheus, bancos reais e preservacao de volumes.
+- Blocos de validacao anteriormente sob Fases 23/27/28.1 realocados para 23/26.2/27/28.1, sem apagar evidencias; secoes da Parte III ordenadas por fase.
+- Validacoes: Angular 26/26 e build; .NET build (0 warnings/erros) e testes 32/32; Go Payment e PriceFeed; Compose config; helpers PowerShell 5.1 e 7.
+- Smoke somente leitura: seis rotas SPA, cinco healths e quatro consultas de API via Nginx HTTP 200; ferramentas HTTP 200; SSE real; bancos e topicos existentes conferidos.
+- O smoke usa a imagem frontend ja em execucao. A correcao nova foi validada por testes/build locais; nao foi feito deploy/reinicio de containers ou cold start.
+- Evidencias invasivas continuam sendo as da Fase 29.2; Kafka nao foi interrompido.
+- Sem alteracao de regras de negocio, contratos, migrations, processamento Kafka, layout ou Kubernetes.
+- Sem staging, commit ou push naquela entrega. Naquele momento, Fases 30 e antiga 31 pendentes; a antiga 31 corresponde agora a Fase 32. Fases 17-22 nao incorporadas.
+
+## FASE 29.2 - Testes integrados e cenarios de falha
+
+Status: Concluido (20/10/2026).
+
+- Criado `scripts/Test-Integration.ps1`: endpoints reais via Nginx, IDs unicos, timeouts, falhas sequenciais opcionais e restauracao em finally.
+- Criado [relatorio de integracao](INTEGRATION_TESTS.md), com matriz e procedimentos de retomada.
+- Branch confirmada: `feature/part-3`; working tree inicialmente limpa.
+- Regressao: Angular 22/22, build frontend aprovado, .NET build sem warnings/erros e testes 32/32, testes dos dois servicos Go aprovados, Compose config aprovado.
+- Primeira tentativa: bloqueada pelo engine Docker; apos reinicializacao pelo usuario, os testes puderam ser executados.
+- Corrigidos dois erros do script: arrays REST aninhados no PowerShell 5.1 e expectativa de resposta HTTP imediata durante parada do upstream Nginx.
+- Criado `scripts/Test-Integration.Helpers.ps1`; verificacoes independentes passaram em Windows PowerShell 5.1 e PowerShell 7.
+- Rodada final `phase29-2-cd80e69c5a5f444d8e5ab18b0c7a6963`: 8 cenarios PASSOU, codigo 0; pedidos/auditoria, validacao de entrada, SSE/Kafka e recuperacao de Payment, Inventory, Pricing, PriceFeed e Audit.
+- PostgreSQL e Kafka conferidos para os IDs atuais; 13 servicos persistentes running ao final, kafka-init Exited (0).
+- Relatorio detalhado e JSONs registram evidencias; os resultados originais do usuario foram preservados.
+- Telas Angular verificadas com pedido atual, filtro de auditoria e payload real. Reconexao SSE comprovada na mesma sessao: Conectado -> Reconectando -> Conectado, com novos eventos e sem reload.
+- Corrigido bug do cliente SSE: EventSource CLOSED apos handshake 502 agora permite nova tentativa apos 3s; unsubscribe cancela a tentativa pendente. Suite Angular passou com 24/24; builds local/Docker aprovados.
+- Kafka nao sera interrompido por risco conhecido de SaveChanges antes de publicacao. Consistencia segue pendente da Fase 32 (antiga Fase 31).
+- Nenhum commit, staging, push, migration, contrato ou regra de negocio alterado naquela execucao. Revisao posterior: Fase 29.3 acima.
 
 ## Regra de execucao
 
@@ -1087,3 +1285,456 @@ Resultado da validacao:
 - `GET /prices` retornou estado derivado real, incluindo `PRIO3`;
 - `GET /prices/PRIO3` retornou `{"symbol":"PRIO3","price":5279,"occurredAt":"2026-10-01T10:33:27.9110091-03:00"}`;
 - interrupcao e reinicio do `Pricing.Service` foram testados mantendo `PriceFeed.Service` produzindo; apos reiniciar, o consumer group voltou a consumir e a API exibiu estado derivado novamente.
+
+## FASE 23 - Angular, estrutura inicial e Docker Compose
+
+Status: Concluido
+
+Criado:
+
+- aplicacao Angular em `src/frontend/MicroservicesLab.App`;
+- componentes standalone com Angular Router;
+- navegacao inicial para dashboard, produtos, pedidos, precos, auditoria e observabilidade;
+- pagina placeholder simples informando que o laboratorio esta disponivel;
+- configuracao central de endpoints em `src/environments`;
+- `proxy.conf.json` para desenvolvimento local sem CORS;
+- `Dockerfile` multi-stage usando build Node e Nginx;
+- `nginx.conf` com fallback de SPA e proxy para os servicos internos do Compose;
+- servico `frontend` no `docker-compose.yml`, publicado em `http://localhost:4200`.
+
+Decisoes didaticas:
+
+- a FASE 23 prepara a base da aplicacao sem implementar funcionalidades das telas futuras;
+- nao foi criado API Gateway ou BFF;
+- as rotas `/api/order`, `/api/inventory`, `/api/pricefeed` e `/api/pricing` isolam o front-end das portas reais dos servicos;
+- no desenvolvimento local, o proxy do Angular aponta para `localhost:5074`, `localhost:5276`, `localhost:5080` e `localhost:5090`;
+- no Docker, o Nginx encaminha para `order-service:8080`, `inventory-service:8080`, `pricefeed-service:8080` e `pricing-service:8080`.
+
+Validacao:
+
+```powershell
+node --version
+pnpm --version
+pnpm install --frozen-lockfile
+pnpm build
+docker compose config --quiet
+docker compose build frontend
+dotnet build .\MicroservicesLab.sln
+dotnet test .\MicroservicesLab.sln
+cd .\src\services\PriceFeed.Service
+go test ./...
+cd ..\Payment.Service
+go test ./...
+```
+
+
+Resultado da validacao:
+
+- `node --version`: disponivel (`v24.19.0`);
+- `pnpm --version`: aprovado (`11.25.0`);
+- `pnpm install --frozen-lockfile`: aprovado;
+- build Angular local: aprovado com `pnpm build`;
+- smoke local: `http://127.0.0.1:4200/` e `http://127.0.0.1:4200/produtos` retornaram HTTP 200;
+- `docker compose config --quiet`: aprovado;
+- `docker compose build frontend`: aprovado, imagem `microservices-lab-frontend:latest` criada;
+- `dotnet build .\MicroservicesLab.sln`: aprovado, 0 warnings, 0 errors;
+- `dotnet test .\MicroservicesLab.sln`: aprovado, 27/27 testes;
+- `go test ./...` em `PriceFeed.Service`: aprovado;
+- `go test ./...` em `Payment.Service`: aprovado.
+
+## FASE 24 - Dashboard e navegacao
+
+Status: Concluido
+
+Criado/evoluido:
+
+- dashboard funcional na rota `/dashboard`;
+- cards com total de produtos, pedidos e simbolos com preco;
+- consumo real de `GET /api/inventory/products`, `GET /api/order/orders` e `GET /api/pricing/prices`;
+- status dos servicos HTTP acessiveis pelo front-end usando endpoints `/health`;
+- estados independentes de carregamento, erro, indisponibilidade e vazio;
+- botao manual para atualizar indicadores;
+- servicos Angular especificos para Inventory, Order e Pricing;
+- navegacao da FASE 23 preservada, com destaque de rota ativa;
+- paginas de produtos, pedidos, precos, auditoria e observabilidade preservadas como placeholders.
+
+Decisoes didaticas:
+
+- nao foi implementado polling automatico;
+- nao foi implementado SSE nesta fase;
+- nao foram criados API Gateway, BFF, autenticacao ou novos endpoints backend;
+- quando uma API falha, o dashboard exibe `Indisponivel` e mantem os demais indicadores funcionando.
+
+Validacao:
+
+```powershell
+cd .\src\frontend\MicroservicesLab.App
+pnpm build
+pnpm start
+Invoke-WebRequest -UseBasicParsing http://127.0.0.1:4200/
+Invoke-WebRequest -UseBasicParsing http://127.0.0.1:4200/produtos
+docker compose config --quiet
+docker compose up -d --build
+dotnet build .\MicroservicesLab.sln
+dotnet test .\MicroservicesLab.sln --no-build
+cd .\src\services\PriceFeed.Service
+go test ./...
+cd ..\Payment.Service
+go test ./...
+```
+
+## FASE 25 - Produtos e estoque
+
+Status: Concluido
+
+Criado/evoluido:
+
+- tela funcional na rota `/produtos`;
+- listagem real de produtos consumindo `GET /api/inventory/products`;
+- cadastro de produtos consumindo `POST /api/inventory/products`;
+- painel de detalhes consumindo `GET /api/inventory/products/{id}`;
+- consulta de disponibilidade consumindo `POST /api/inventory/products/{id}/availability`;
+- formularios reativos com validacao de nome, preco e quantidade;
+- estados de loading, vazio, sucesso e erro;
+- atualizacao manual da listagem;
+- layout responsivo integrado a identidade visual da Parte III;
+- suporte ao locale `pt-BR` para exibicao monetaria em BRL.
+
+Decisoes didaticas:
+
+- a tela consome somente APIs existentes do `Inventory.Service`;
+- nao foram implementadas edicao, exclusao ou reserva manual de estoque;
+- a reserva de estoque continua reservada para os fluxos de pedidos das proximas fases;
+- nao foram criados API Gateway, BFF, autenticacao ou novos endpoints backend.
+
+Validacao:
+
+```powershell
+cd .\src\frontend\MicroservicesLab.App
+pnpm build
+docker compose config --quiet
+docker compose up -d --build frontend
+dotnet build .\MicroservicesLab.sln
+dotnet test .\MicroservicesLab.sln --no-build
+cd .\src\services\PriceFeed.Service
+go test ./...
+cd ..\Payment.Service
+go test ./...
+```
+
+Resultado da validacao:
+
+- build Angular local: aprovado com `pnpm build`;
+- `docker compose config --quiet`: aprovado;
+- `docker compose up -d --build frontend`: aprovado, imagem `microservices-lab-frontend:latest` reconstruida e container iniciado;
+- `dotnet build .\MicroservicesLab.sln`: aprovado, 0 warnings, 0 errors;
+- `dotnet test .\MicroservicesLab.sln --no-build`: aprovado, 27/27 testes;
+- `go test ./...` em `PriceFeed.Service`: aprovado;
+- `go test ./...` em `Payment.Service`: aprovado;
+- smoke via Docker/Nginx: `GET http://127.0.0.1:4200/produtos` retornou HTTP 200;
+- produto real criado via proxy do front-end: `7147eab7-a183-489c-8b46-934e9bbe4ad0`, `Produto Frontend Fase 25`, preco `123.45`, estoque `7`;
+- detalhes do produto consultados com sucesso;
+- disponibilidade para quantidade `3` retornou `isAvailable=true` e preservou `availableQuantity=7`.
+
+## FASE 26.1 - Analise da integracao entre pedidos e estoque
+
+Status: Concluido sem implementacao
+
+Conclusao:
+
+- o contrato gRPC ja possui `ReserveStock`;
+- o `Inventory.Service` ja implementa reserva via HTTP e gRPC;
+- o `Order.Service` atualmente usa somente `CheckAvailability`;
+- a reserva atual nao possui idempotencia nem protecao explicita contra concorrencia;
+- a integracao segura da reserva foi adiada para a antiga FASE 31, agora FASE 32.
+
+Pendencia futura da FASE 32 (antiga FASE 31):
+
+- reserva atomica;
+- idempotencia;
+- compensacao de estoque;
+- concorrencia;
+- tratamento de falhas distribuidas.
+
+## FASE 26.2 - Interface de pedidos e acompanhamento de pagamentos
+
+Status: Concluido
+
+Criado/evoluido:
+
+- tela funcional na rota `/pedidos`;
+- listagem real de pedidos consumindo `GET /api/order/orders`;
+- criacao de pedidos consumindo `POST /api/order/orders`;
+- consulta de detalhes consumindo `GET /api/order/orders/{id}`;
+- seletor de produtos reais carregados do `Inventory.Service`;
+- formularios reativos com validacao de produto e quantidade;
+- status visuais para `Pending`, `Paid` e `PaymentRejected`;
+- polling de detalhes enquanto o pedido esta `Pending`;
+- interrupcao de polling em status final, falhas consecutivas ou destruicao do componente;
+- estados de loading, vazio, sucesso e erro;
+- atualizacao manual da lista e do pedido selecionado.
+
+Decisoes didaticas:
+
+- nao foi criado endpoint HTTP no `Payment.Service`;
+- nao foram implementados SSE ou WebSocket para pedidos;
+- nao foi implementada reserva automatica de estoque;
+- a tela usa exclusivamente o comportamento atual do backend.
+
+Validacao:
+
+```powershell
+cd .\src\frontend\MicroservicesLab.App
+pnpm build
+docker compose config --quiet
+docker compose up -d --build frontend
+dotnet build .\MicroservicesLab.sln
+dotnet test .\MicroservicesLab.sln --no-build
+cd .\src\services\PriceFeed.Service
+go test ./...
+cd ..\Payment.Service
+go test ./...
+```
+
+Resultado da validacao:
+
+- build Angular local: aprovado com `pnpm build`;
+- `docker compose config --quiet`: aprovado;
+- `docker compose up -d --build frontend`: aprovado, imagem `microservices-lab-frontend:latest` reconstruida e container iniciado;
+- `dotnet build .\MicroservicesLab.sln`: aprovado, 0 warnings, 0 errors;
+- `dotnet test .\MicroservicesLab.sln --no-build`: aprovado, 27/27 testes;
+- `go test ./...` em `PriceFeed.Service`: aprovado;
+- `go test ./...` em `Payment.Service`: aprovado;
+- smoke via Docker/Nginx: `GET http://127.0.0.1:4200/pedidos` retornou HTTP 200;
+- pedido real criado via proxy do front-end: `5b6ec07b-17a9-489e-be2a-d05793153ce2`, produto `f525ba73-8eb8-4d6f-aaab-a37546146daa`, quantidade `1`, total `5500.00`;
+- polling manual confirmou transicao `Pending -> Paid`;
+- durante a primeira tentativa de smoke, o `Payment.Service` nao estava em execucao por falha anterior de conexao ao Kafka; o servico foi iniciado com `docker compose up -d payment-service` e a validacao foi repetida com sucesso.
+
+
+## FASE 27 - Precos realtime (SSE)
+
+Status: Concluido
+
+Criado/evoluido:
+
+- tela funcional na rota `/precos`;
+- snapshot REST consumindo `GET /api/pricing/prices`;
+- stream realtime consumindo `GET /api/pricefeed/prices/stream`;
+- servico Angular especifico para SSE usando `EventSource`;
+- tratamento do evento SSE real `price-update`;
+- tipagem do payload real `{ symbol, price, occurredAt }`;
+- separacao visual entre REST/Kafka e SSE direto;
+- estados de conexao: conectando, conectado, reconectando, desconectado e erro;
+- destaque visual breve quando um simbolo recebe novo preco;
+- historico recente de eventos SSE recebidos;
+- encerramento da conexao SSE ao sair da tela.
+
+Decisoes didaticas:
+
+- o snapshot REST representa o estado processado pelo `Pricing.Service` apos consumo Kafka;
+- o stream SSE representa atualizacoes diretas do `PriceFeed.Service`;
+- os dois fluxos sao exibidos separadamente porque podem divergir momentaneamente;
+- nao foram implementados WebSocket, graficos complexos, API Gateway, BFF ou novos endpoints.
+
+Validacao:
+
+```powershell
+cd .\src\frontend\MicroservicesLab.App
+pnpm build
+docker compose config --quiet
+docker compose up -d --build frontend
+dotnet build .\MicroservicesLab.sln
+dotnet test .\MicroservicesLab.sln --no-build
+cd .\src\services\PriceFeed.Service
+go test ./...
+cd ..\Payment.Service
+go test ./...
+```
+
+
+Resultado da validacao:
+
+- build Angular local: aprovado com `pnpm build`;
+- `docker compose config --quiet`: aprovado;
+- `docker compose up -d --build frontend`: aprovado, imagem `microservices-lab-frontend:latest` reconstruida e container iniciado;
+- `dotnet build .\MicroservicesLab.sln`: aprovado, 0 warnings, 0 errors;
+- `dotnet test .\MicroservicesLab.sln --no-build`: aprovado, 27/27 testes;
+- `go test ./...` em `PriceFeed.Service`: aprovado;
+- `go test ./...` em `Payment.Service`: aprovado;
+- smoke via Docker/Nginx: `GET http://127.0.0.1:4200/precos` retornou HTTP 200;
+- snapshot REST via `GET http://127.0.0.1:4200/api/pricing/prices` retornou 5 simbolos;
+- stream SSE via `GET http://127.0.0.1:4200/api/pricefeed/prices/stream` retornou eventos reais `price-update`;
+- em uma janela de 6 segundos, foram observados 60 eventos SSE;
+- exemplo real recebido: `{"symbol":"WEGE3","price":4030,"occurredAt":"2026-10-11T04:18:56.943107183Z"}`;
+- falhas forcadas de servicos nao foram executadas nesta validacao para evitar interromper o ambiente local; a tela mantem REST e SSE em secoes independentes e trata erro por fluxo.
+
+## FASE 28.1 - API de consulta de auditoria e interface Angular
+
+Status: Concluido
+
+Arquitetura escolhida:
+
+- a API HTTP foi hospedada no proprio `Audit.Worker`;
+- o consumidor Kafka existente continua sendo o unico consumidor de auditoria;
+- o mesmo `AuditDbContext` consulta `audit_db`;
+- nao foi criado servico separado, API Gateway ou BFF.
+
+Criado/evoluido:
+
+- endpoint `GET /audit-events` no `Audit.Worker`;
+- endpoint `GET /health` no `Audit.Worker`;
+- consulta read-only com `AsNoTracking()`;
+- ordenacao do mais recente para o mais antigo;
+- limite de resultados com maximo de 200 registros;
+- filtros opcionais por `eventType` e `messageKey`;
+- alias `orderId` aceito quando equivalente a `messageKey`;
+- proxy Docker/Nginx e proxy de desenvolvimento em `/api/audit`;
+- tela Angular funcional na rota `/auditoria`;
+- listagem de eventos persistidos;
+- detalhes do evento selecionado;
+- payload completo preservado e formatado quando JSON valido.
+
+Decisoes didaticas:
+
+- o schema do banco nao foi alterado;
+- nenhuma migration foi criada;
+- a idempotencia existente por `EventId` foi preservada;
+- contratos Kafka e regras de pedidos/pagamentos nao foram modificados;
+- nao foi implementado polling automatico, edicao, exclusao ou busca textual complexa.
+
+Validacao:
+
+```powershell
+dotnet test .\tests\Audit.Worker.Tests\Audit.Worker.Tests.csproj
+cd .\src\frontend\MicroservicesLab.App
+pnpm build
+docker compose config --quiet
+docker compose up -d --build
+dotnet build .\MicroservicesLab.sln
+dotnet test .\MicroservicesLab.sln --no-build
+cd .\src\services\PriceFeed.Service
+go test ./...
+cd ..\Payment.Service
+go test ./...
+```
+
+
+Resultado da validacao:
+
+- `dotnet test .\tests\Audit.Worker.Tests\Audit.Worker.Tests.csproj`: aprovado, 7/7 testes;
+- build Angular local: aprovado com `pnpm build`;
+- `docker compose config --quiet`: aprovado;
+- `docker compose up -d --build`: aprovado, incluindo `audit-worker` com HTTP em `http://localhost:5288`;
+- `dotnet build .\MicroservicesLab.sln`: aprovado, 0 warnings, 0 errors;
+- `dotnet test .\MicroservicesLab.sln --no-build`: aprovado, 32/32 testes;
+- `go test ./...` em `PriceFeed.Service`: aprovado;
+- `go test ./...` em `Payment.Service`: aprovado;
+- smoke via Docker/Nginx: `GET http://127.0.0.1:4200/auditoria` retornou HTTP 200;
+- `GET http://127.0.0.1:4200/api/audit/health` retornou HTTP 200;
+- pedido real criado para validacao: `88dc3e3f-a4df-4945-8b3b-851e43f0813e`;
+- pagamento confirmado com transicao `Pending -> Paid`;
+- consulta `GET /api/audit/audit-events?messageKey=88dc3e3f-a4df-4945-8b3b-851e43f0813e&limit=20` retornou 2 eventos reais: `PaymentApproved` e `OrderCreated`;
+- filtro por tipo `eventType=OrderCreated` retornou 1 evento;
+- validacao de duplicidade confirmou que nao houve `EventId` duplicado persistido para o pedido;
+- parametro invalido `limit=999` retornou HTTP 400 com mensagem `limit must be between 1 and 200.`.
+
+## FASE 28.2 - Interface de observabilidade
+
+Status: Concluido
+
+Criado/evoluido:
+
+- tela funcional na rota `/observabilidade`;
+- health checks reais para `Order.Service`, `Inventory.Service`, `Audit.Worker`, `PriceFeed.Service` e `Pricing.Service`;
+- `Payment.Service` exibido como nao monitorado, porque nao expoe endpoint HTTP de health nesta fase;
+- atualizacao manual da saude dos servicos;
+- polling simples a cada 15 segundos, encerrado ao sair da tela;
+- links para Grafana, Prometheus e Jaeger usando as portas publicadas no host;
+- visao estatica dos fluxos de pedidos, precos e observabilidade;
+- reutilizacao da configuracao central de endpoints do Angular.
+
+Decisoes didaticas:
+
+- nenhum endpoint de health novo foi criado;
+- a tela diferencia servico indisponivel de servico sem monitoramento HTTP;
+- Grafana, Prometheus e Jaeger continuam sendo as ferramentas de observabilidade;
+- a visao arquitetural e informativa e nao representa telemetria em tempo real.
+
+Validacao:
+
+```powershell
+cd .\src\frontend\MicroservicesLab.App
+pnpm build
+docker compose config --quiet
+docker compose up -d --build frontend
+dotnet build .\MicroservicesLab.sln
+dotnet test .\MicroservicesLab.sln --no-build
+cd .\src\services\PriceFeed.Service
+go test ./...
+cd ..\Payment.Service
+go test ./...
+```
+
+Resultado da validacao:
+
+- build Angular local: aprovado com `pnpm build`;
+- `docker compose config --quiet`: aprovado;
+- `docker compose up -d --build frontend`: aprovado, com `frontend` publicado em `http://localhost:4200`;
+- `dotnet build .\MicroservicesLab.sln`: aprovado, 0 warnings, 0 errors;
+- `dotnet test .\MicroservicesLab.sln --no-build`: aprovado, 32/32 testes;
+- `go test ./...` em `PriceFeed.Service`: aprovado;
+- `go test ./...` em `Payment.Service`: aprovado;
+- smoke via Docker/Nginx: `GET http://127.0.0.1:4200/observabilidade` retornou HTTP 200;
+- health checks via proxy do front-end retornaram HTTP 200 para Order, Inventory, PriceFeed, Pricing e Audit;
+- Grafana, Prometheus e Jaeger responderam HTTP 200 nas portas publicadas;
+- `Payment.Service` permanece sem health HTTP e e exibido como nao monitorado.
+
+## FASE 29.1 - Testes automatizados Angular
+
+Status: Concluido
+
+Criado/evoluido:
+
+- configuracao de testes do front-end com Vitest e jsdom;
+- scripts `pnpm test` e `pnpm test:ci`, ambos em execucao unica/headless;
+- setup Angular de testes em `src/test-setup.ts`;
+- testes dos servicos HTTP `OrderApiService`, `InventoryApiService`, `PricingApiService`, `AuditApiService` e `LabHealthService`;
+- testes do `PriceFeedSseService` com `EventSource` falso;
+- testes comportamentais da tela de pedidos, incluindo criacao, polling, transicoes `Pending -> Paid` e `Pending -> PaymentRejected`, falhas consecutivas e destruicao durante polling;
+- testes da tela de auditoria, incluindo filtros, resultado vazio, erros e formatacao de payload JSON;
+- testes da tela de observabilidade, incluindo health checks saudavel/indisponivel/nao monitorado, atualizacao manual, polling automatico e links das ferramentas.
+
+Decisoes didaticas:
+
+- Vitest foi escolhido por ser leve, headless, compativel com TypeScript e adequado para execucao automatizada sem navegador grafico;
+- jsdom fornece o DOM necessario para testes Angular sem abrir Chrome;
+- os testes usam mocks HTTP e `EventSource` falso;
+- a suite nao depende de Docker, PostgreSQL, Kafka, Grafana, Prometheus ou Jaeger;
+- nao foram implementados testes E2E completos nesta fase.
+
+Validacao:
+
+```powershell
+cd .\src\frontend\MicroservicesLab.App
+pnpm test
+pnpm test:ci
+pnpm build
+docker compose config --quiet
+dotnet build .\MicroservicesLab.sln
+dotnet test .\MicroservicesLab.sln --no-build
+cd .\src\services\PriceFeed.Service
+go test ./...
+cd ..\Payment.Service
+go test ./...
+```
+
+Resultado da validacao:
+
+- `pnpm test`: aprovado, 22/22 testes;
+- `pnpm test:ci`: aprovado, 22/22 testes;
+- `pnpm build`: aprovado;
+- `docker compose config --quiet`: aprovado;
+- `dotnet build .\MicroservicesLab.sln`: aprovado, 0 warnings, 0 errors;
+- `dotnet test .\MicroservicesLab.sln --no-build`: aprovado, 32/32 testes;
+- `go test ./...` em `PriceFeed.Service`: aprovado;
+- `go test ./...` em `Payment.Service`: aprovado.
